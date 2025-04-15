@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Asciidoctor 2.0.23">
+<meta name="author" content="Wilmer Moina &amp; Diego Fernández">
+<title>Automating Secret Management with Vault Namespaces and External Secrets</title>
+<link rel="stylesheet" href="./css/main.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="./rouge-github.css">
+<!-- docinfo.html -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="styles.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Seleccionamos los bloques de código
+    const codeBlocks = document.querySelectorAll('pre.rouge.highlight, pre.src');
+
+    codeBlocks.forEach(function(block) {
+      const codeNode = block.querySelector('code');
+      const button = document.createElement('button');
+      button.className = 'copy-button';
+      // Usamos innerHTML para insertar el icono
+      button.innerHTML = `<i class="material-icons">content_copy</i>`;
+
+      // Insertamos el botón al inicio del <pre>
+      block.insertBefore(button, block.firstChild);
+
+      button.addEventListener('click', function() {
+        const codeText = codeNode ? codeNode.innerText : block.innerText;
+        navigator.clipboard.writeText(codeText)
+          .then(() => {
+            // Cambia el icono a "check" para indicar que se copió
+            button.innerHTML = `<i class="material-icons">check</i>`;
+            setTimeout(() => {
+              button.innerHTML = `<i class="material-icons">content_copy</i>`;
+            }, 1500);
+          })
+          .catch(err => {
+            console.error('Error copying text: ', err);
+          });
+      });
+    });
+  });
+  </script>
+
+  <style>
+    /* Ocultamos el botón por defecto */
+    .copy-button {
+      display: none;
+      position: absolute;
+      right: 0.2rem;
+      top: 1rem;
+      background-color: #f7f8fa;
+      border: 1px solid #f7f8fa;
+      border-radius: 4px;
+      padding: 0.3em 0.6em;
+      font-size: 0.em;
+      cursor: pointer;
+      color: #7d7d7d;
+    }
+
+    .material-icons {
+      font-size: 1em;
+      vertical-align: middle;
+    }
+
+    /* Hacemos que el <pre> sea contenedor posicionable */
+    pre.rouge.highlight,
+    pre.src {
+      position: relative;
+    }
+
+    /* Mostramos el botón solo al pasar el mouse */
+    pre.rouge.highlight:hover .copy-button,
+    pre.src:hover .copy-button {
+      display: block;
+    }
+
+    pre code {
+      font-size: 0.9em !important;
+    }
+    </style>
+
+
+</head>
+<body class="book toc2 toc-left">
+<div id="header">
+<h1>Automating Secret Management with Vault Namespaces and External Secrets</h1>
+<div class="details">
+<span id="author" class="author">Wilmer Moina &amp; Diego Fernández</span><br>
+<span id="revdate">2025-04-13</span>
+</div>
+<div id="toc" class="toc2">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#_introduction">1. Introduction</a></li>
+<li><a href="#_seminar_objectives">2. Seminar Objectives</a>
+<ul class="sectlevel2">
+<li><a href="#_key_outcomes">2.1. Key Outcomes</a></li>
+</ul>
+</li>
+<li><a href="#_environment_and_tooling">3. Environment and Tooling</a>
+<ul class="sectlevel2">
+<li><a href="#_tools_used">3.1. Tools Used</a></li>
+<li><a href="#_system_requirements">3.2. System Requirements</a></li>
+</ul>
+</li>
+<li><a href="#_lab_guide">4. Lab Guide</a>
+<ul class="sectlevel2">
+<li><a href="#_provisioning_the_k3s_cluster">4.1. Provisioning the K3s Cluster</a></li>
+<li><a href="#_installing_vault">4.2. Installing Vault</a></li>
+<li><a href="#_preparing_kubernetes_namespaces_and_workloads">4.3. Preparing Kubernetes Namespaces and Workloads</a></li>
+<li><a href="#_configuring_vault">4.4. Configuring Vault</a></li>
+<li><a href="#_installing_external_secrets_operator_eso">4.5. Installing External Secrets Operator (ESO)</a></li>
+<li><a href="#_deploying_keycloak">4.6. Deploying Keycloak</a></li>
+</ul>
+</li>
+<li><a href="#_best_practices_and_security_considerations">5. Best Practices and Security Considerations</a></li>
+<li><a href="#_references">6. References</a></li>
+<li><a href="#_list_of_figures">7. List of figures</a></li>
+</ul>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_introduction">1. Introduction</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HashiCorp Vault is a highly flexible tool for managing secrets, encryption keys, and access policies. With the introduction of <em>Vault Namespaces</em>, organizations can isolate teams, environments, or tenants with fully independent Vault environments, all within the same cluster.</p>
+</div>
+<div class="paragraph">
+<p>On the other hand, the <em>External Secrets Operator (ESO)</em> allows Kubernetes-native integration with external secret stores, such as Vault, AWS Secrets Manager, and others, enabling secure and declarative secret management.</p>
+</div>
+<div class="paragraph">
+<p>This seminar explores how to:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Provision a K3s cluster.</p>
+</li>
+<li>
+<p>Deploy Vault with multiple namespaces.</p>
+</li>
+<li>
+<p>Use External Secrets Operator to sync and inject secrets into different Kubernetes namespaces.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_seminar_objectives">2. Seminar Objectives</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The main goal of this seminar is to teach students how to automate secure secret management in Kubernetes using Vault and External Secrets.</p>
+</div>
+<div class="sect2">
+<h3 id="_key_outcomes">2.1. Key Outcomes</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Deploy a lightweight K3s cluster locally using <code>k3d</code>.</p>
+</li>
+<li>
+<p>Install HashiCorp Vault using Helm with support for multiple namespaces.</p>
+</li>
+<li>
+<p>Configure different Kubernetes namespaces for Dev, QA, and Prod.</p>
+</li>
+<li>
+<p>Deploy one Keycloak instance per namespace, each with its own Realm and Client.</p>
+</li>
+<li>
+<p>Use External Secrets Operator to:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Fetch secrets from Vault.</p>
+</li>
+<li>
+<p>Inject them into Kubernetes workloads.</p>
+</li>
+<li>
+<p>Automatically sync updates when Vault values change.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Automate this setup using Terraform and Ansible.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_environment_and_tooling">3. Environment and Tooling</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_tools_used">3.1. Tools Used</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Docker (with Docker Desktop on macOS)</p>
+</li>
+<li>
+<p>k3d (K3s in Docker)</p>
+</li>
+<li>
+<p>Helm</p>
+</li>
+<li>
+<p>Terraform</p>
+</li>
+<li>
+<p>Ansible</p>
+</li>
+<li>
+<p>External Secrets Operator</p>
+</li>
+<li>
+<p>HashiCorp Vault</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_system_requirements">3.2. System Requirements</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>macOS or Ubuntu with at least 8 GB RAM</p>
+</li>
+<li>
+<p>Docker installed and running</p>
+</li>
+<li>
+<p>Internet access to pull container images and charts</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_lab_guide">4. Lab Guide</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_provisioning_the_k3s_cluster">4.1. Provisioning the K3s Cluster</h3>
+<div class="paragraph">
+<p>In this section, we will provision a local Kubernetes cluster using <code>k3d</code>, a lightweight wrapper that runs K3s inside Docker containers. This approach is particularly suitable for local development environments, hands-on labs, and CI pipelines due to its simplicity and speed.</p>
+</div>
+<div class="sect3">
+<h4 id="_step_1_install_k3d">4.1.1. Step 1: Install K3d</h4>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="ulist">
+<ul>
+<li>
+<p>For installation instructions, refer to the official k3d documentation: <a href="https://k3d.io/stable/#installation" target="_blank" rel="noopener">k3d</a>.</p>
+</li>
+<li>
+<p>To install <code>kubectl</code>, follow the official Kubernetes documentation: <a href="https://kubernetes.io/docs/tasks/tools/" target="_blank" rel="noopener">kubectl</a>.</p>
+</li>
+<li>
+<p>The Kubernetes version used in this seminar is <code>v1.31.5+k3s1</code>.</p>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Verify the installation:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">k3d version</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output should look similar to:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">k3d version v5.8.3
+k3s version v1.31.5-k3s1 (default)</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_step_2_create_the_k3s_cluster">4.1.2. Step 2: Create the K3s Cluster</h4>
+<div class="paragraph">
+<p>We&#8217;ll create a cluster with one server node and two agent nodes, exposing HTTPS (port 443) via the load balancer. We also disable the default Traefik ingress controller, as we will deploy our own services.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">k3d cluster create workshop <span class="se">\</span>
+  <span class="nt">--servers</span> 1 <span class="se">\</span>
+  <span class="nt">--agents</span> 2 <span class="se">\</span>
+  <span class="nt">--port</span> <span class="s2">"443:443@loadbalancer"</span> <span class="se">\</span>
+  <span class="nt">--k3s-arg</span> <span class="s2">"--disable=traefik@server:0"</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This command:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Creates a cluster named <code>workshop</code>.</p>
+</li>
+<li>
+<p>Starts 1 server (control-plane) and 2 agents (workers).</p>
+</li>
+<li>
+<p>Exposes port 443 from the load balancer to the host.</p>
+</li>
+<li>
+<p>Disables Traefik to avoid conflicts with custom ingress controllers.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_step_3_verify_cluster_status">4.1.3. Step 3: Verify Cluster Status</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl get nodes</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">NAME                    STATUS   ROLES                  AGE   VERSION
+</span><span class="gp">k3d-workshop-agent-0    Ready    &lt;none&gt;</span><span class="w">                 </span>11s   v1.31.5+k3s1
+<span class="gp">k3d-workshop-agent-1    Ready    &lt;none&gt;</span><span class="w">                 </span>11s   v1.31.5+k3s1
+<span class="go">k3d-workshop-server-0   Ready    control-plane,master   18s   v1.31.5+k3s1</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The K3s cluster is now ready for deploying Vault and other components.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>To temporarily stop the cluster and free up system resources, you can stop the underlying Docker containers:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">k3d cluster stop workshop</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To bring the cluster back online later:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">k3d cluster start workshop</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This is especially useful during multi-day workshops or when switching between tasks, as it avoids recreating the cluster from scratch.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_installing_vault">4.2. Installing Vault</h3>
+<div class="paragraph">
+<p>In this step, we will install HashiCorp Vault in the Kubernetes cluster using Helm. Vault will serve as our central secret management system. We will use the official Helm chart and run it in "dev" mode initially, just to validate the deployment and make quick iterations.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="title">Recommended Resources:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://developer.hashicorp.com/vault/docs/what-is-vault" target="_blank" rel="noopener">What is Vault?</a></p>
+</li>
+<li>
+<p><a href="https://developer.hashicorp.com/vault/docs/platform/k8s/helm" target="_blank" rel="noopener">Vault Helm chart</a></p>
+</li>
+<li>
+<p><a href="https://helm.sh/docs/intro/install/" target="_blank" rel="noopener">Helm Installation</a></p>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_add_the_hashicorp_helm_repository">4.2.1. Add the HashiCorp Helm Repository</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">helm repo add hashicorp https://helm.releases.hashicorp.com
+helm repo update</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_deploying_vault_in_ha_mode">4.2.2. Deploying Vault in HA Mode</h4>
+<div class="paragraph">
+<p>In this section, we will deploy Vault in High Availability (HA) mode using the integrated Raft storage backend. This setup provides a more realistic and production-like experience, suitable for multi-node clusters and secret replication scenarios.</p>
+</div>
+<div class="paragraph">
+<p>We start by installing Vault using the official Helm chart, with a custom <code>values.yaml</code> file that enables HA mode and configures Raft storage with <code>retry_join</code> directives.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> vault hashicorp/vault <span class="se">\</span>
+  <span class="nt">--namespace</span> vault <span class="se">\</span>
+  <span class="nt">--create-namespace</span> <span class="se">\</span>
+  <span class="nt">-f</span> helm/vault/config.yaml</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The configuration:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Deploys 3 Vault replicas.</p>
+</li>
+<li>
+<p>Enables Raft storage with automatic <code>retry_join</code>.</p>
+</li>
+<li>
+<p>Disables TLS for simplicity (not recommended for production).</p>
+</li>
+<li>
+<p>Exposes the Vault UI using a LoadBalancer service.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_wait_for_the_pods_to_be_ready">4.2.3. Wait for the Pods to Be Ready</h4>
+<div class="paragraph">
+<p>Check that all Vault pods are running:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl get pods <span class="nt">-n</span> vault</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">NAME      READY   STATUS    RESTARTS   AGE
+vault-0   1/1     Running   0          2m
+vault-1   1/1     Running   0          2m
+vault-2   1/1     Running   0          2m</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_initialize_the_vault_cluster">4.2.4. Initialize the Vault Cluster</h4>
+<div class="paragraph">
+<p>Vault must be initialized before it can be used. This step generates the master key, which is split into multiple unseal keys.</p>
+</div>
+<div class="paragraph">
+<p>We&#8217;ll use a simplified setup with only <strong>1 unseal key</strong> required:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl <span class="nb">exec</span> <span class="nt">-it</span> vault-0 <span class="nt">-n</span> vault <span class="nt">--</span> vault operator init <span class="nt">-key-shares</span><span class="o">=</span>1 <span class="nt">-key-threshold</span><span class="o">=</span>1</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Vault uses Shamir’s Secret Sharing algorithm to split a master key into multiple parts (shares).
+- <code>key-shares</code> is the total number of unseal keys generated.
+- <code>key-threshold</code> is the number of keys required to unseal the Vault.</p>
+</div>
+<div class="paragraph">
+<p>For this seminar, we simplify by using 1 key out of 1 (<code>1-of-1</code>), which is <strong>not secure for production</strong>, but ideal for learning purposes.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Make sure to <strong>copy and store the unseal key and root token</strong> that are printed. You’ll need them in the next step.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_unseal_all_vault_nodes">4.2.5. Unseal All Vault Nodes</h4>
+<div class="paragraph">
+<p>Each Vault pod must be manually unsealed (unless auto-unseal is configured).
+You will use the same unseal key generated during the initialization step.</p>
+</div>
+<div class="paragraph">
+<p>To simplify this process, we recommend storing the unseal key in a shell variable:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">export </span><span class="nv">VAULT_UNSEAL_KEY</span><span class="o">=</span><span class="s2">"your-unseal-key-here"</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Replace <code>"your-unseal-key-here"</code> with the key printed during <code>vault operator init</code>.</p>
+</div>
+<div class="paragraph">
+<p>Then unseal each pod using:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl <span class="nb">exec</span> <span class="nt">-it</span> vault-0 <span class="nt">-n</span> vault <span class="nt">--</span> vault operator unseal <span class="nv">$VAULT_UNSEAL_KEY</span>
+kubectl <span class="nb">exec</span> <span class="nt">-it</span> vault-1 <span class="nt">-n</span> vault <span class="nt">--</span> vault operator unseal <span class="nv">$VAULT_UNSEAL_KEY</span>
+kubectl <span class="nb">exec</span> <span class="nt">-it</span> vault-2 <span class="nt">-n</span> vault <span class="nt">--</span> vault operator unseal <span class="nv">$VAULT_UNSEAL_KEY</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>After all nodes are unsealed, you can verify the cluster status by running:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl <span class="nb">exec</span> <span class="nt">-it</span> vault-0 <span class="nt">-n</span> vault <span class="nt">--</span> vault status</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This will show whether Vault is sealed, the current HA mode, the active node, and peer connectivity.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_accessing_the_vault_ui">4.2.6. Accessing the Vault UI</h4>
+<div class="paragraph">
+<p>To access the Vault Web UI locally:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Forward the UI service port:</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl port-forward svc/vault <span class="nt">-n</span> vault 8200:8200</code></pre>
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Open your browser and go to: <a href="http://localhost:8200" class="bare">http://localhost:8200</a></p>
+</li>
+<li>
+<p>Log in using the <strong>Initial Root Token</strong> provided by <code>vault operator init</code>.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>You now have a fully working, HA-enabled Vault deployment backed by Raft storage, ready to be extended with namespaces and External Secrets.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_preparing_kubernetes_namespaces_and_workloads">4.3. Preparing Kubernetes Namespaces and Workloads</h3>
+<div class="paragraph">
+<p>Before configuring Vault, we need to prepare our Kubernetes cluster with the necessary namespaces.</p>
+</div>
+<div class="paragraph">
+<p>Each environment (<code>dev</code>, <code>qa</code>, <code>prod</code>) will have:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A dedicated Kubernetes namespace</p>
+</li>
+<li>
+<p>A custom ServiceAccount named <code>vault-sa</code></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This setup ensures that:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Vault roles and policies can bind securely to service accounts per namespace</p>
+</li>
+<li>
+<p>Secrets can later be synced with External Secrets Operator (ESO) in a clean, isolated manner</p>
+</li>
+</ul>
+</div>
+<div class="sect3">
+<h4 id="_create_namespaces_and_service_accounts">4.3.1. Create Namespaces and Service Accounts</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="k">for </span>ns <span class="k">in </span>dev qa prod<span class="p">;</span> <span class="k">do
+  </span>kubectl create namespace <span class="nv">$ns</span>
+  kubectl create serviceaccount vault-sa <span class="nt">-n</span> <span class="nv">$ns</span>
+<span class="k">done</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>We intentionally avoid using the default service account to improve security and clarity in Vault bindings.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Once these namespaces and service accounts are in place, we can proceed to configure Vault using Terraform.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_configuring_vault">4.4. Configuring Vault</h3>
+<div class="paragraph">
+<p>With Vault running in High Availability (HA) mode, we now configure it to manage secrets for three isolated environments: <code>dev</code>, <code>qa</code>, and <code>prod</code>.</p>
+</div>
+<div class="paragraph">
+<p>Since Vault OSS does not support namespaces (an Enterprise-only feature), we simulate environment-level isolation using a combination of:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Separate KV secrets engines: <code>secret-dev</code>, <code>secret-qa</code>, and <code>secret-prod</code></p>
+</li>
+<li>
+<p>Access control policies (ACLs) scoped to each environment</p>
+</li>
+<li>
+<p>Kubernetes auth roles bound to specific namespaces</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>All configuration is automated using Terraform for consistency, reproducibility, and version control.</p>
+</div>
+<div class="sect3">
+<h4 id="_directory_structure">4.4.1. Directory Structure</h4>
+<div class="paragraph">
+<p>All Terraform files related to Vault configuration are located under <code>terraform/vault/</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">terraform/vault/
+</span><span class="gp">├── kubernetes_auth.tf   #</span><span class="w"> </span>Enables Kubernetes auth and defines Vault roles
+<span class="gp">├── kv_mounts.tf         #</span><span class="w"> </span>Mounts KV v2 engines <span class="k">for </span>dev, qa, and prod
+<span class="gp">├── policies.tf          #</span><span class="w"> </span>Defines ACL policies <span class="k">for </span>each environment
+<span class="gp">├── provider.tf          #</span><span class="w"> </span>Vault provider configuration using input variables
+<span class="gp">└── variables.tf         #</span><span class="w"> </span>Input variables <span class="k">for </span>Vault address and token</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_mounting_kv_engines">4.4.2. Mounting KV Engines</h4>
+<div class="paragraph">
+<p>The <code>kv_mounts.tf</code> file mounts a KV v2 secrets engine for each environment using <code>vault_mount</code> resources.</p>
+</div>
+<div class="paragraph">
+<p>These mounts appear as:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>secret-dev/</code> → used exclusively by workloads in the <code>dev</code> namespace</p>
+</li>
+<li>
+<p><code>secret-qa/</code>  → used by <code>qa</code> workloads</p>
+</li>
+<li>
+<p><code>secret-prod/</code> → dedicated to <code>prod</code></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>All engines are configured with version 2 for secret versioning and soft delete support.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_defining_access_policies">4.4.3. Defining Access Policies</h4>
+<div class="paragraph">
+<p>The file <code>policies.tf</code> defines a Vault policy for each environment.
+Each policy allows read-only access to the corresponding KV mount, ensuring strict separation of access.</p>
+</div>
+<div class="paragraph">
+<p>Example: <code>dev</code> policy</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="hcl"><span class="nx">path</span> <span class="s2">"secret-dev/data/*"</span> <span class="p">{</span>
+  <span class="nx">capabilities</span> <span class="p">=</span> <span class="p">[</span><span class="s2">"read"</span><span class="p">,</span> <span class="s2">"list"</span><span class="p">]</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This approach prevents workloads in one namespace from accessing secrets belonging to another.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_enabling_kubernetes_authentication">4.4.4. Enabling Kubernetes Authentication</h4>
+<div class="paragraph">
+<p>The <code>kubernetes_auth.tf</code> file automates the full setup of the Kubernetes auth method in Vault:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Enables the <code>kubernetes</code> auth backend</p>
+</li>
+<li>
+<p>Configures Vault to communicate with the in-cluster Kubernetes API</p>
+</li>
+<li>
+<p>Creates one Vault <code>role</code> per environment:</p>
+</li>
+<li>
+<p><code>dev</code> role → bound to service accounts in the <code>dev</code> namespace</p>
+</li>
+<li>
+<p><code>qa</code> role → bound to <code>qa</code> namespace</p>
+</li>
+<li>
+<p><code>prod</code> role → bound to <code>prod</code> namespace</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This ensures that only authorized workloads can request secrets from the correct environment.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_providing_vault_and_kubernetes_credentials">4.4.5. Providing Vault and Kubernetes Credentials</h4>
+<div class="paragraph">
+<p>To securely configure Vault with Kubernetes authentication, we use a <code>.tfvars.json</code> file to provide all sensitive variables required by Terraform.</p>
+</div>
+<div class="paragraph">
+<p>Create the file <code>secrets.auto.tfvars.json</code> inside <code>terraform/vault/</code> with the following content:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="json"><span class="p">{</span><span class="w">
+  </span><span class="nl">"vault_addr"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://localhost:8200"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"vault_token"</span><span class="p">:</span><span class="w"> </span><span class="s2">"hvs.YourRootTokenHere"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"kubernetes_host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://kubernetes.default.svc"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"kubernetes_ca_cert"</span><span class="p">:</span><span class="w"> </span><span class="s2">"-----BEGIN CERTIFICATE-----</span><span class="se">\n</span><span class="s2">MIID...</span><span class="se">\n</span><span class="s2">-----END CERTIFICATE-----"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"token_reviewer_jwt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"eyJhbGciOiJSUzI1NiIsIn..."</span><span class="w">
+</span><span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Terraform automatically loads all files ending in <code>.auto.tfvars.json</code>, so there&#8217;s no need to specify this file manually during <code>terraform apply</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_how_to_obtain_the_required_values">4.4.6. How to Obtain the Required Values</h4>
+<div class="paragraph">
+<p>These values can be extracted from any running pod in your cluster, such as <code>vault-0</code>.</p>
+</div>
+<div class="paragraph">
+<p>To get the Kubernetes CA certificate:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl <span class="nb">exec</span> <span class="nt">-n</span> vault vault-0 <span class="nt">--</span> <span class="nb">cat</span> /var/run/secrets/kubernetes.io/serviceaccount/ca.crt | <span class="nb">awk</span> <span class="s1">'{printf "%s\\n", $0}'</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Copy the entire output, including the <code>-----BEGIN CERTIFICATE-----</code> and <code>-----END CERTIFICATE-----</code> lines into the JSON value of <code>kubernetes_ca_cert</code>.</p>
+</div>
+<div class="paragraph">
+<p>To get the token reviewer JWT:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl <span class="nb">exec</span> <span class="nt">-n</span> vault vault-0 <span class="nt">--</span> <span class="nb">cat</span> /var/run/secrets/kubernetes.io/serviceaccount/token</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Copy the full JWT token output and paste it into the <code>token_reviewer_jwt</code> field.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Do not commit the <code>secrets.auto.tfvars.json</code> file to version control.
+Add it to <code>.gitignore</code> to protect your credentials.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_applying_the_configuration">4.4.7. Applying the Configuration</h4>
+<div class="paragraph">
+<p>Once the variables file is ready, apply the configuration:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">cd </span>terraform/vault
+terraform init
+terraform apply</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Terraform will:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Mount the three KV secrets engines</p>
+</li>
+<li>
+<p>Upload environment-specific access policies</p>
+</li>
+<li>
+<p>Enable and configure the Kubernetes authentication backend</p>
+</li>
+<li>
+<p>Create Vault roles bound to service accounts in the <code>dev</code>, <code>qa</code>, and <code>prod</code> namespaces</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Your Vault instance is now fully configured for secure, isolated access from each Kubernetes environment.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_verifying_kubernetes_authentication_to_vault">4.4.8. Verifying Kubernetes Authentication to Vault</h4>
+<div class="paragraph">
+<p>Now that Vault is configured, we can verify that a Kubernetes workload in the <code>dev</code> namespace can authenticate to Vault and access its secrets securely using the <code>vault-sa</code> service account.</p>
+</div>
+<div class="sect4">
+<h5 id="_step_1_create_a_test_secret_in_vault">Step 1: Create a test secret in Vault</h5>
+<div class="paragraph">
+<p>First, store a secret in the <code>secret-dev</code> path using a Vault token that has the appropriate policy (e.g., the root token):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">export </span><span class="nv">VAULT_ADDR</span><span class="o">=</span>http://127.0.0.1:8200
+<span class="nb">export </span><span class="nv">VAULT_TOKEN</span><span class="o">=</span>hvs.YourRootTokenHere
+
+vault kv put secret-dev/example <span class="nv">username</span><span class="o">=</span><span class="s2">"admin"</span> <span class="nv">password</span><span class="o">=</span><span class="s2">"s3cr3t"</span>
+vault kv put secret-qa/example <span class="nv">username</span><span class="o">=</span><span class="s2">"admin"</span> <span class="nv">password</span><span class="o">=</span><span class="s2">"s3cr3t"</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If you see the error:</p>
+</div>
+<div class="paragraph">
+<p><code>permission denied</code></p>
+</div>
+<div class="paragraph">
+<p>Make sure you&#8217;re using a Vault token that includes the correct policy (<code>dev</code>, <code>qa</code>, or <code>prod</code>) for the secrets engine you&#8217;re targeting.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_step_2_deploy_a_test_pod_using_vault_sa">Step 2: Deploy a test pod using <code>vault-sa</code></h5>
+<div class="paragraph">
+<p>Run the following command to deploy a temporary test pod in the <code>dev</code> namespace:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-vault
+  namespace: dev
+spec:
+  serviceAccountName: vault-sa
+  containers:
+  - name: tester
+    image: alpine
+    command: ["sh", "-c", "sleep 3600"]
+  restartPolicy: Never
+EOF</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_step_3_access_the_pod_and_install_curl_jq">Step 3: Access the pod and install curl + jq</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl <span class="nb">exec</span> <span class="nt">-it</span> test-vault <span class="nt">-n</span> dev <span class="nt">--</span> sh</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Once inside the pod, install the required tools:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="sh">apk add <span class="nt">--no-cache</span> curl jq</code></pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_step_4_authenticate_with_vault_using_the_pods_service_account">Step 4: Authenticate with Vault using the pod’s service account</h5>
+<div class="paragraph">
+<p>Export the Vault address and read the pod’s JWT token:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="sh"><span class="nb">export </span><span class="nv">VAULT_ADDR</span><span class="o">=</span>http://vault.vault.svc:8200
+<span class="nb">export </span><span class="nv">SA_TOKEN</span><span class="o">=</span><span class="si">$(</span><span class="nb">cat</span> /var/run/secrets/kubernetes.io/serviceaccount/token<span class="si">)</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Use the token to authenticate to Vault:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="sh"><span class="nb">export </span><span class="nv">VAULT_TOKEN</span><span class="o">=</span><span class="si">$(</span>curl <span class="nt">--silent</span> <span class="nt">--request</span> POST <span class="se">\</span>
+  <span class="nt">--data</span> <span class="s1">'{"jwt": "'</span><span class="s2">"</span><span class="nv">$SA_TOKEN</span><span class="s2">"</span><span class="s1">'", "role": "dev"}'</span> <span class="se">\</span>
+  <span class="nv">$VAULT_ADDR</span>/v1/auth/kubernetes/login | jq <span class="nt">-r</span> <span class="s1">'.auth.client_token'</span><span class="si">)</span>
+
+<span class="c"># Verify the token</span>
+<span class="nb">echo</span> <span class="nv">$VAULT_TOKEN</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The response that you receive should look similar to this:</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/vaultToken.png" alt="Vault token login response" width="600">
+</div>
+<div class="title">Figure 1. Vault token issued via Kubernetes authentication using vault-sa in dev namespace</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_step_5_use_the_vault_token_to_retrieve_a_secret">Step 5: Use the Vault token to retrieve a secret</h5>
+<div class="paragraph">
+<p>Now that we have a Vault token, use it to access the secret:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="sh">curl <span class="nt">--silent</span> <span class="se">\</span>
+  <span class="nt">--header</span> <span class="s2">"X-Vault-Token: </span><span class="nv">$VAULT_TOKEN</span><span class="s2">"</span> <span class="se">\</span>
+  <span class="nv">$VAULT_ADDR</span>/v1/secret-dev/data/example | jq</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If configured correctly, you should see the secret:</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/vaultSecret.png" alt="Vault token login response" width="600">
+</div>
+<div class="title">Figure 2. Secret retrieved from Vault using the token</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_final_step_clean_up">Final Step: Clean up</h5>
+<div class="paragraph">
+<p>Exit the pod and delete it:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">exit
+</span>kubectl delete pod test-vault <span class="nt">-n</span> dev</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>You can capture this output as a screenshot to include in the lab report or Medium post as proof of successful Vault-Kubernetes integration.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_installing_external_secrets_operator_eso">4.5. Installing External Secrets Operator (ESO)</h3>
+<div class="paragraph">
+<p>In this section, we install the External Secrets Operator (ESO), which synchronizes secrets from Vault into native Kubernetes <code>Secret</code> objects.
+This allows Kubernetes workloads to consume secrets managed in Vault without requiring application-level changes.</p>
+</div>
+<div class="sect3">
+<h4 id="_recommended_resources">4.5.1. Recommended Resources</h4>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://external-secrets.io/main/" target="\"_blank\"">What is External Secrets Operator?</a></p>
+</li>
+<li>
+<p><a href="https://external-secrets.io/latest/introduction/getting-started/" target="\"_blank\"">ESO Getting Started Guide</a></p>
+</li>
+<li>
+<p><a href="https://github.com/external-secrets/external-secrets" target="\"_blank\"">ESO GitHub Repository</a></p>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_1_add_the_eso_helm_repository">4.5.2. 1. Add the ESO Helm repository</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">helm repo add external-secrets https://charts.external-secrets.io
+helm repo update</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_2_install_eso_in_the_external_secrets_namespace">4.5.3. 2. Install ESO in the <code>external-secrets</code> namespace</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> external-secrets external-secrets/external-secrets <span class="se">\</span>
+  <span class="nt">--namespace</span> external-secrets <span class="se">\</span>
+  <span class="nt">--create-namespace</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This command:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Installs ESO components (Core Controller, Webhook, Cert Controller)</p>
+</li>
+<li>
+<p>Creates the required CRDs (<code>SecretStore</code>, <code>ClusterSecretStore</code>, <code>ExternalSecret</code>)</p>
+</li>
+<li>
+<p>Prepares the cluster to sync secrets from Vault</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_3_verify_eso_pods_are_running">4.5.4. 3. Verify ESO pods are running</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl get pods <span class="nt">-n</span> external-secrets</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">NAME                                               READY   STATUS    RESTARTS   AGE
+external-secrets-86f7b8cc94-jlzj9                  1/1     Running   0          8m
+external-secrets-cert-controller-59f9f9cd77-z4cf6  1/1     Running   0          8m
+external-secrets-webhook-5fc8544c4c-dld6m          1/1     Running   0          8m</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>All components should report <code>READY 1/1</code> and <code>STATUS Running</code>. If not, inspect logs via <code>kubectl logs</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_4_create_a_secretstore_in_each_environment_namespace">4.5.5. 4. Create a SecretStore in each environment namespace</h4>
+<div class="paragraph">
+<p>Each namespace (<code>dev</code>, <code>qa</code>, <code>prod</code>) must define a <code>SecretStore</code> resource that configures Vault access using Kubernetes authentication.</p>
+</div>
+<div class="paragraph">
+<p>To preview the manifest using Helm templating:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">helm template vault-store <span class="nt">--namespace</span> dev helm/external-secrets/secretStore/ <span class="nt">--dry-run</span><span class="o">=</span>server | yq</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="yaml"><span class="c1"># Source: secretStore/templates/secretStore.yaml</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">external-secrets.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">SecretStore</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">vault-store</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">dev</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">provider</span><span class="pi">:</span>
+    <span class="na">vault</span><span class="pi">:</span>
+      <span class="na">server</span><span class="pi">:</span> <span class="s">http://vault.vault.svc:8200</span>
+      <span class="na">path</span><span class="pi">:</span> <span class="s">secret-dev</span>
+      <span class="na">version</span><span class="pi">:</span> <span class="s2">"</span><span class="s">v2"</span>
+      <span class="na">auth</span><span class="pi">:</span>
+        <span class="na">kubernetes</span><span class="pi">:</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">kubernetes</span>
+          <span class="na">role</span><span class="pi">:</span> <span class="s">dev</span>
+          <span class="na">serviceAccountRef</span><span class="pi">:</span>
+            <span class="na">name</span><span class="pi">:</span> <span class="s">vault-sa</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To deploy it:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> vault-store <span class="nt">--namespace</span> dev helm/external-secrets/secretStore/</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Verify that the SecretStore is valid:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl get secretstore <span class="nt">-n</span> dev</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">NAME          AGE   STATUS   CAPABILITIES   READY
+vault-store   48s   Valid    ReadWrite      True</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_5_define_an_externalsecret_to_sync_data_from_vault">4.5.6. 5. Define an ExternalSecret to sync data from Vault</h4>
+<div class="paragraph">
+<p>An <code>ExternalSecret</code> defines how ESO should fetch data from Vault and write it into a Kubernetes <code>Secret</code>.</p>
+</div>
+<div class="paragraph">
+<p>To preview:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">helm template dev-credential <span class="nt">--namespace</span> dev helm/external-secrets/externalSecret/ <span class="nt">--dry-run</span><span class="o">=</span>server | yq</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="yaml"><span class="c1"># Source: externalSecret/templates/externalSecret.yaml</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">external-secrets.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ExternalSecret</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">dev-credential</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">dev</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">refreshInterval</span><span class="pi">:</span> <span class="s">1h</span>
+  <span class="na">secretStoreRef</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">vault-store</span>
+    <span class="na">kind</span><span class="pi">:</span> <span class="s">SecretStore</span>
+  <span class="na">target</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">synced-dev-credential</span>
+    <span class="na">creationPolicy</span><span class="pi">:</span> <span class="s">Owner</span>
+  <span class="na">data</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">secretKey</span><span class="pi">:</span> <span class="s">username</span>
+      <span class="na">remoteRef</span><span class="pi">:</span>
+        <span class="na">key</span><span class="pi">:</span> <span class="s">example</span>
+        <span class="na">property</span><span class="pi">:</span> <span class="s">username</span>
+    <span class="pi">-</span> <span class="na">secretKey</span><span class="pi">:</span> <span class="s">password</span>
+      <span class="na">remoteRef</span><span class="pi">:</span>
+        <span class="na">key</span><span class="pi">:</span> <span class="s">example</span>
+        <span class="na">property</span><span class="pi">:</span> <span class="s">password</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Deploy it:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> dev-credential <span class="nt">--namespace</span> dev helm/external-secrets/externalSecret/</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Verify that it was created:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl get externalsecret <span class="nt">-n</span> dev</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">NAME             STORETYPE     STORE         REFRESH INTERVAL   STATUS         READY
+dev-credential   SecretStore   vault-store   1h                 SecretSynced   True</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_6_verify_that_the_secret_was_synced">4.5.7. 6. Verify that the secret was synced</h4>
+<div class="paragraph">
+<p>Once synced, ESO creates a Kubernetes <code>Secret</code> with the desired values.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl get secret synced-dev-credential <span class="nt">-n</span> dev <span class="nt">-o</span> <span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.data}'</span> | jq</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You should see both <code>username</code> and <code>password</code> encoded in base64.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/syncedSecret.png" alt="Synced secret" width="450">
+</div>
+<div class="title">Figure 3. Vault secret synced to Kubernetes</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_deploying_keycloak">4.6. Deploying Keycloak</h3>
+<div class="paragraph">
+<p>In this section, we deploy a single instance of Keycloak into the <code>iam</code> namespace using the Bitnami Helm chart.
+This Keycloak instance will later host one Realm per environment (<code>dev</code>, <code>qa</code>, <code>prod</code>), acting as the centralized Identity Provider for the platform.</p>
+</div>
+<div class="sect3">
+<h4 id="_recommended_resources_2">4.6.1. Recommended Resources</h4>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://www.keycloak.org/" target="_blank" rel="noopener">What is Keycloak?</a></p>
+</li>
+<li>
+<p><a href="https://github.com/bitnami/charts/tree/main/bitnami/keycloak" target="_blank" rel="noopener">Bitnami Keycloak Chart</a></p>
+</li>
+<li>
+<p><a href="https://artifacthub.io/packages/helm/bitnami/keycloak" target="_blank" rel="noopener">ArtifactHub Keycloak</a></p>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_1_add_the_bitnami_helm_repository">4.6.2. 1. Add the Bitnami Helm repository</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_2_deploy_keycloak_in_the_iam_namespace_with_persistence">4.6.3. 2. Deploy Keycloak in the <code>iam</code> namespace (with persistence)</h4>
+<div class="paragraph">
+<p>We deploy Keycloak with an embedded PostgreSQL database and persistent storage enabled.
+This prevents data loss across pod restarts and ensures the state of realms, users, and configurations is retained.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> keycloak bitnami/keycloak <span class="se">\</span>
+  <span class="nt">--namespace</span> iam <span class="se">\</span>
+  <span class="nt">--create-namespace</span> <span class="se">\</span>
+  <span class="nt">--set</span> auth.adminUser<span class="o">=</span>admin <span class="se">\</span>
+  <span class="nt">--set</span> auth.adminPassword<span class="o">=</span><span class="s2">"N0TaRandomPassword"</span> <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">proxy</span><span class="o">=</span>edge <span class="se">\</span>
+  <span class="nt">--set</span> service.type<span class="o">=</span>ClusterIP <span class="se">\</span>
+  <span class="nt">--set</span> postgresql.primary.persistence.enabled<span class="o">=</span><span class="nb">true</span> <span class="se">\</span>
+  <span class="nt">--set</span> postgresql.primary.persistence.size<span class="o">=</span>1Gi</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This configuration:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Installs Keycloak in the <code>iam</code> namespace</p>
+</li>
+<li>
+<p>Sets default admin credentials (for demo use only)</p>
+</li>
+<li>
+<p>Uses internal PostgreSQL with persistent volume</p>
+</li>
+<li>
+<p>Exposes Keycloak via <code>ClusterIP</code> (internal access only)</p>
+</li>
+<li>
+<p>Enables <code>proxy=edge</code> for UI access via port-forward</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This setup is sufficient for the seminar. In production, consider using an external managed PostgreSQL service.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_3_wait_for_the_keycloak_pods_to_be_ready">4.6.4. 3. Wait for the Keycloak pods to be ready</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl get pods <span class="nt">-n</span> iam</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">NAME         READY   STATUS    RESTARTS   AGE
+keycloak-0   1/1     Running   0          1m</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_4_access_the_keycloak_admin_ui_optional">4.6.5. 4. Access the Keycloak admin UI (optional)</h4>
+<div class="paragraph">
+<p>You can access the Keycloak web UI by port-forwarding:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl port-forward svc/keycloak <span class="nt">-n</span> iam 8080:8080</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then visit: <a href="http://localhost:8080" class="bare">http://localhost:8080</a></p>
+</div>
+<div class="paragraph">
+<p>Login credentials:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Username: <code>admin</code></p>
+</li>
+<li>
+<p>Password: <code>admin123</code></p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_5_next_steps">4.6.6. 5. Next Steps</h4>
+<div class="paragraph">
+<p>We will later configure:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A separate Realm for each environment (<code>dev</code>, <code>qa</code>, <code>prod</code>)</p>
+</li>
+<li>
+<p>Role-based access control (RBAC), users, clients, and groups</p>
+</li>
+<li>
+<p>Integration with Kubernetes and Vault (if needed)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>These configurations will be applied manually or automated via CLI/REST/API in a future step.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_best_practices_and_security_considerations">5. Best Practices and Security Considerations</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Never hardcode Vault tokens or root credentials in source files.</p>
+</li>
+<li>
+<p>Use short-lived tokens and role-based access control (RBAC) in Vault.</p>
+</li>
+<li>
+<p>Ensure TLS is configured in production scenarios.</p>
+</li>
+<li>
+<p>Use namespaces to segment teams or environments cleanly.</p>
+</li>
+<li>
+<p>Set resource limits and configure alerts for secret rotation failures.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_references">6. References</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://developer.hashicorp.com/vault/docs" class="bare">https://developer.hashicorp.com/vault/docs</a></p>
+</li>
+<li>
+<p><a href="https://external-secrets.io" class="bare">https://external-secrets.io</a></p>
+</li>
+<li>
+<p><a href="https://k3d.io" class="bare">https://k3d.io</a></p>
+</li>
+<li>
+<p><a href="https://helm.sh" class="bare">https://helm.sh</a></p>
+</li>
+<li>
+<p><a href="https://www.keycloak.org" class="bare">https://www.keycloak.org</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_list_of_figures">7. List of figures</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>list-of::image[]</p>
+</div>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+</div>
+</div>
+</div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2025-04-13 14:12:46 +0200
+</div>
+</div>
+</body>
+</html>

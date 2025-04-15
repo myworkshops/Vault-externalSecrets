@@ -1,0 +1,6 @@
+# ignore ALL .log files
+*.log
+.DS_Store
+docs/.bundle/
+docs/Gemfile*
+docs/pygments-default*

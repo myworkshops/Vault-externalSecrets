@@ -1,0 +1,8 @@
+
+== Best Practices and Security Considerations
+
+- Never hardcode Vault tokens or root credentials in source files.
+- Use short-lived tokens and role-based access control (RBAC) in Vault.
+- Ensure TLS is configured in production scenarios.
+- Use namespaces to segment teams or environments cleanly.
+- Set resource limits and configure alerts for secret rotation failures.

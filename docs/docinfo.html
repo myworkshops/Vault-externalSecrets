@@ -1,0 +1,76 @@
+<!-- docinfo.html -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="styles.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Seleccionamos los bloques de código
+    const codeBlocks = document.querySelectorAll('pre.rouge.highlight, pre.src');
+  
+    codeBlocks.forEach(function(block) {
+      const codeNode = block.querySelector('code');
+      const button = document.createElement('button');
+      button.className = 'copy-button';
+      // Usamos innerHTML para insertar el icono
+      button.innerHTML = `<i class="material-icons">content_copy</i>`;
+  
+      // Insertamos el botón al inicio del <pre>
+      block.insertBefore(button, block.firstChild);
+  
+      button.addEventListener('click', function() {
+        const codeText = codeNode ? codeNode.innerText : block.innerText;
+        navigator.clipboard.writeText(codeText)
+          .then(() => {
+            // Cambia el icono a "check" para indicar que se copió
+            button.innerHTML = `<i class="material-icons">check</i>`;
+            setTimeout(() => {
+              button.innerHTML = `<i class="material-icons">content_copy</i>`;
+            }, 1500);
+          })
+          .catch(err => {
+            console.error('Error copying text: ', err);
+          });
+      });
+    });
+  });
+  </script>
+    
+  <style>
+    /* Ocultamos el botón por defecto */
+    .copy-button {
+      display: none;
+      position: absolute;
+      right: 0.2rem;
+      top: 1rem;
+      background-color: #f7f8fa;
+      border: 1px solid #f7f8fa;
+      border-radius: 4px;
+      padding: 0.3em 0.6em;
+      font-size: 0.em;
+      cursor: pointer;
+      color: #7d7d7d;
+    }
+    
+    .material-icons {
+      font-size: 1em;
+      vertical-align: middle;
+    }
+
+    /* Hacemos que el <pre> sea contenedor posicionable */
+    pre.rouge.highlight,
+    pre.src {
+      position: relative;
+    }
+    
+    /* Mostramos el botón solo al pasar el mouse */
+    pre.rouge.highlight:hover .copy-button,
+    pre.src:hover .copy-button {
+      display: block;
+    }
+
+    pre code {
+      font-size: 0.9em !important;
+    }
+    </style>
+
+    

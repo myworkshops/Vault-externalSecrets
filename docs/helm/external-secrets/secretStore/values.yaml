@@ -1,0 +1,8 @@
+vault:
+  vaultPath: "secret-dev"
+  sever: "http://vault.vault.svc:8200"
+  auth:
+    kubernetes:
+      mountPath: "kubernetes"
+      role: "dev"
+      serviceAccountName: vault-sa

@@ -1,0 +1,8 @@
+
+== References
+
+- https://developer.hashicorp.com/vault/docs
+- https://external-secrets.io
+- https://k3d.io
+- https://helm.sh
+- https://www.keycloak.org

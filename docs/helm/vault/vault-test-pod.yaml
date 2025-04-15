@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-vault
+  namespace: dev
+spec:
+  serviceAccountName: vault-sa
+  containers:
+  - name: tester
+    image: alpine
+    command: ["sh"]
+    args: ["-c", "sleep 3600"]
+  restartPolicy: Never

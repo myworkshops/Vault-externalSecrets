@@ -1,0 +1,18 @@
+
+== Environment and Tooling
+
+=== Tools Used
+
+- Docker (with Docker Desktop on macOS)
+- k3d (K3s in Docker)
+- Helm
+- Terraform
+- Ansible
+- External Secrets Operator
+- HashiCorp Vault
+
+=== System Requirements
+
+- macOS or Ubuntu with at least 8 GB RAM
+- Docker installed and running
+- Internet access to pull container images and charts

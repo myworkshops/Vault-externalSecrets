@@ -1,0 +1,29 @@
+= Automating Secret Management with Vault Namespaces and External Secrets
+:doctype: book
+:author: Wilmer Moina & Diego Fernández
+:revdate: {docdate}
+:toc: left
+:icons: font
+:sectnums:
+:sectnumlevels: 3
+:numbered:
+:source-highlighter: pygments
+:stylesheet: css/main.css
+:linkcss:
+:docinfo: shared
+
+include::01-introduction.adoc[]
+include::02-objectives.adoc[]
+include::03-environment.adoc[]
+include::04-lab-guide.adoc[]
+include::05-best-practices.adoc[]
+include::06-references.adoc[]
+
+== List of figures
+list-of::image[]
+
+[pass]
+++++
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+++++

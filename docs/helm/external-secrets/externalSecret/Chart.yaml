@@ -1,0 +1,4 @@
+apiVersion: v2
+name: ExternalSecret
+description: A Helm chart to create External Secrets Instance
+version: "1.0.0"

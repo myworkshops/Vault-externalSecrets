@@ -1,0 +1,4 @@
+apiVersion: v2
+name: Secretstore
+description: A Helm chart to create External Secrets SecretStore
+version: "1.0.0"

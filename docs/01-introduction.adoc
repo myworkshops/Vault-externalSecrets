@@ -1,0 +1,11 @@
+== Introduction
+
+HashiCorp Vault is a highly flexible tool for managing secrets, encryption keys, and access policies. With the introduction of _Vault Namespaces_, organizations can isolate teams, environments, or tenants with fully independent Vault environments, all within the same cluster.
+
+On the other hand, the _External Secrets Operator (ESO)_ allows Kubernetes-native integration with external secret stores, such as Vault, AWS Secrets Manager, and others, enabling secure and declarative secret management.
+
+This seminar explores how to:
+
+- Provision a K3s cluster.
+- Deploy Vault with multiple namespaces.
+- Use External Secrets Operator to sync and inject secrets into different Kubernetes namespaces.

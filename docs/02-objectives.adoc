@@ -1,0 +1,16 @@
+
+== Seminar Objectives
+
+The main goal of this seminar is to teach students how to automate secure secret management in Kubernetes using Vault and External Secrets.
+
+=== Key Outcomes
+
+- Deploy a lightweight K3s cluster locally using `k3d`.
+- Install HashiCorp Vault using Helm with support for multiple namespaces.
+- Configure different Kubernetes namespaces for Dev, QA, and Prod.
+- Deploy one Keycloak instance per namespace, each with its own Realm and Client.
+- Use External Secrets Operator to:
+  * Fetch secrets from Vault.
+  * Inject them into Kubernetes workloads.
+  * Automatically sync updates when Vault values change.
+- Automate this setup using Terraform and Ansible.

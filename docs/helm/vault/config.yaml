@@ -1,0 +1,55 @@
+server:
+  ha:
+    enabled: true
+    replicas: 3
+    raft:
+      enabled: true
+      setNodeId: true
+      config: |
+        ui = true
+        listener "tcp" {
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+          tls_disable = true
+        }
+        storage "raft" {
+          path = "/vault/data"
+          retry_join {
+            leader_api_addr = "http://vault-0.vault-internal:8200"
+          }
+          retry_join {
+            leader_api_addr = "http://vault-1.vault-internal:8200"
+          }
+          retry_join {
+            leader_api_addr = "http://vault-2.vault-internal:8200"
+          }
+        }
+        service_registration "kubernetes" {}
+  dataStorage:
+    enabled: true
+    size: 2Gi
+    storageClass: null
+    accessMode: ReadWriteOnce
+  auditStorage:
+    enabled: true
+    size: 1Gi
+    storageClass: null
+    accessMode: ReadWriteOnce
+  extraArgs: "-log-level=debug"
+  readinessProbe:
+    enabled: true
+    path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+  livenessProbe:
+    enabled: true
+    path: "/v1/sys/health?standbyok=true"
+    initialDelaySeconds: 60
+  # affinity: | 
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #         - matchExpressions:
+  #             - key: node-role.kubernetes.io/worker
+  #               operator: Exists
+ui:
+  enabled: true
+  serviceType: "LoadBalancer"
