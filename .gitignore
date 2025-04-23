@@ -4,3 +4,10 @@
 docs/.bundle/
 docs/Gemfile*
 docs/pygments-default*
+
+# Terraform
+# Terraform
+*.tfstate
+*.tfvars.json
+.terraform/
+.terraform.lock.hcl

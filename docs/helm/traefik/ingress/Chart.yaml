@@ -1,0 +1,4 @@
+apiVersion: v2
+name: Ingress
+description: A Helm chart to create Ingress resources
+version: "1.0.0"

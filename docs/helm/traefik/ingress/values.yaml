@@ -1,0 +1,21 @@
+name: sentinel-1-api
+namespace: dev
+
+annotations:
+  ingressClass: traefik
+
+spec:
+  ingressClassName: traefik
+  rules:
+    host: sentinel-1.test
+    paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sentinel-1-api
+            port: 80
+
+tls:
+  enabled: true
+  secretName: sentinel-1-tls

@@ -7,7 +7,9 @@
 // - Deploying Keycloak in Dev/QA/Prod
 // - Testing sync updates with secrets
 
-== Lab Guide
+== Platform Foundation: K3d, Vault, ESO, and Keycloak Setup
+
+This section covers the essential components for secure identity and secrets management in Kubernetes.
 
 === Provisioning the K3s Cluster
 
@@ -39,7 +41,7 @@ k3s version v1.31.5-k3s1 (default)
 
 ==== Step 2: Create the K3s Cluster
 
-We'll create a cluster with one server node and two agent nodes, exposing HTTPS (port 443) via the load balancer. We also disable the default Traefik ingress controller, as we will deploy our own services.
+We'll create a cluster with one server node and two agent nodes, exposing ports 443 and 80 for the load balancer.
 
 [source,bash]
 ----
@@ -47,7 +49,7 @@ k3d cluster create workshop \
   --servers 1 \
   --agents 2 \
   --port "443:443@loadbalancer" \
-  --k3s-arg "--disable=traefik@server:0"
+  --port "80:80@loadbalancer"
 ----
 
 This command:
@@ -212,22 +214,63 @@ kubectl exec -it vault-0 -n vault -- vault status
 
 This will show whether Vault is sealed, the current HA mode, the active node, and peer connectivity.
 
-==== Accessing the Vault UI
+==== Accessing the Vault UI via Ingress
 
-To access the Vault Web UI locally:
+To access the Vault Web UI using an Ingress controller (e.g. Traefik), we expose the Vault service externally by deploying a custom Ingress using our own Helm chart.
 
-. Forward the UI service port:
+. Make sure an Ingress controller like Traefik is deployed in your cluster.
+
+. Deploy the Ingress pointing to the `vault-ui` service using the following Helm command:
 
 [source,bash]
 ----
-kubectl port-forward svc/vault -n vault 8200:8200
+helm upgrade --install vault-ui-ingress ./helm/traefik/ingress \
+  --namespace vault \
+  --set name=vault-ui-ingress \
+  --set namespace=vault \
+  --set annotations.ingressClass=traefik \
+  --set spec.ingressClassName=traefik \
+  --set spec.rules.host=vault.test \
+  --set spec.rules.paths[0].path="/" \
+  --set spec.rules.paths[0].pathType=Prefix \
+  --set spec.rules.paths[0].backend.service.name=vault-ui \
+  --set spec.rules.paths[0].backend.service.port=8200 \
+  --set tls.enabled=false
 ----
 
-. Open your browser and go to: http://localhost:8200
+This configuration:
 
-. Log in using the **Initial Root Token** provided by `vault operator init`.
+- Deploys a Kubernetes `Ingress` resource under the `vault` namespace
+- Points to the `vault-ui` service on port `8200`
+- Uses Traefik as the Ingress controller
+- Does **not** enable TLS (exposes via HTTP only)
 
-You now have a fully working, HA-enabled Vault deployment backed by Raft storage, ready to be extended with namespaces and External Secrets.
+. Add a DNS entry in your local `/etc/hosts` file to route `vault.test` to your local Ingress controller (typically `127.0.0.1`):
+
+[source,bash]
+----
+echo "127.0.0.1 vault.test" | sudo tee -a /etc/hosts
+----
+
+. Open your browser and go to: http://vault.test[http://vault.test, window="_blank"]
+
+. Log in using the **Initial Root Token**.
+
+Vault is now accessible through an Ingress route, ready to be used with the rest of your platform.
+
+You can also access the Vault UI via port-forwarding:
+[source,bash]
+----
+kubectl port-forward -n vault svc/vault-ui 8200:8200
+----
+
+Then visit: http://localhost:8200
+Login using the **Initial Root Token**.
+
+After logging in, you should see the Vault UI dashboard
+
+.Vault dashboard 
+image::images/vaultUI.png[Vault UI, width=600, align=center]
 
 === Preparing Kubernetes Namespaces and Workloads
 
@@ -336,7 +379,7 @@ Create the file `secrets.auto.tfvars.json` inside `terraform/vault/` with the fo
 [source,json]
 ----
 {
-  "vault_addr": "http://localhost:8200",
+  "vault_addr": "http://vault.test",
   "vault_token": "hvs.YourRootTokenHere",
   "kubernetes_host": "https://kubernetes.default.svc",
   "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----",
@@ -407,7 +450,7 @@ First, store a secret in the `secret-dev` path using a Vault token that has the 
 
 [source,bash]
 ----
-export VAULT_ADDR=http://127.0.0.1:8200
+export VAULT_ADDR=http://vault.test
 export VAULT_TOKEN=hvs.YourRootTokenHere
 
 vault kv put secret-dev/example username="admin" password="s3cr3t"
@@ -586,7 +629,7 @@ To preview the manifest using Helm templating:
 
 [source,bash]
 ----
-helm template vault-store --namespace dev helm/external-secrets/secretStore/ --dry-run=server | yq
+helm template vault --namespace dev helm/external-secrets/secretStore/ --dry-run=server | yq
 ----
 
 Example output:
@@ -617,7 +660,7 @@ To deploy it:
 
 [source,bash]
 ----
-helm upgrade --install vault-store --namespace dev helm/external-secrets/secretStore/
+helm upgrade --install vault --namespace dev helm/external-secrets/secretStore/
 ----
 
 Verify that the SecretStore is valid:
@@ -744,14 +787,11 @@ helm upgrade --install keycloak bitnami/keycloak \
   --namespace iam \
   --create-namespace \
   --set auth.adminUser=admin \
-  --set auth.adminPassword=N0TaRandomPassword \
+  --set auth.adminPassword=admin123 \
   --set proxy=edge \
   --set service.type=ClusterIP \
-  --set externalDatabase.password=N0TaRandomPassword \
   --set postgresql.primary.persistence.enabled=true \
-  --set postgresql.primary.persistence.size=1Gi \
-  --set postgresql.auth.postgresPassword=N0TaRandomPassword \
-  --set postgresql.auth.password=N0TaRandomPassword
+  --set postgresql.primary.persistence.size=1Gi
 ----
 
 This configuration:
@@ -782,28 +822,46 @@ NAME         READY   STATUS    RESTARTS   AGE
 keycloak-0   1/1     Running   0          1m
 ----
 
-==== 4. Access the Keycloak admin UI (optional)
+==== 4. Access the Keycloak Admin UI via Ingress
 
-You can access the Keycloak web UI by port-forwarding:
+To access the Keycloak web UI, we expose it externally using an Ingress resource instead of port-forwarding.  
+This is consistent with the approach used for Vault and better simulates a real-world deployment.
+
+. Deploy the Ingress pointing to the `keycloak` service on port `8080` using the following Helm command:
 
 [source,bash]
 ----
-kubectl port-forward svc/keycloak -n iam 8080:8080
+helm upgrade --install keycloak-ui-ingress ./helm/traefik/ingress \
+  --namespace iam \
+  --set name=keycloak-ui-ingress \
+  --set namespace=iam \
+  --set annotations.ingressClass=traefik \
+  --set spec.ingressClassName=traefik \
+  --set spec.rules.host=keycloak.test \
+  --set spec.rules.paths[0].path="/" \
+  --set spec.rules.paths[0].pathType=Prefix \
+  --set spec.rules.paths[0].backend.service.name=keycloak \
+  --set spec.rules.paths[0].backend.service.port=80 \
+  --set tls.enabled=false
 ----
 
-Then visit: http://localhost:8080
+. Add an entry to your local `/etc/hosts` so the `keycloak.test` domain resolves to your Ingress controller:
 
-Login credentials:
+[source,bash]
+----
+echo "127.0.0.1 keycloak.test" | sudo tee -a /etc/hosts
+----
+
+. Open your browser and navigate to: http://keycloak.test[http://keycloak.test, window="_blank"]
+
+Login using:
 
 - Username: `admin`
 - Password: `admin123`
 
-==== 5. Next Steps
+You now have Keycloak accessible through Ingress, consistent with how Vault is exposed.
 
-We will later configure:
+.User interface of Keycloak
+image::images/keycloakUI.png[Keycloak UI, width=600, align=center]
 
-- A separate Realm for each environment (`dev`, `qa`, `prod`)
-- Role-based access control (RBAC), users, clients, and groups
-- Integration with Kubernetes and Vault (if needed)
-
-These configurations will be applied manually or automated via CLI/REST/API in a future step.
+== Deploying a Go Application with Vault, ESO, and Keycloak Integration

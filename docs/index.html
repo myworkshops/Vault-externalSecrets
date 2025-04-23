@@ -109,7 +109,7 @@
 <li><a href="#_system_requirements">3.2. System Requirements</a></li>
 </ul>
 </li>
-<li><a href="#_lab_guide">4. Lab Guide</a>
+<li><a href="#_platform_foundation_k3d_vault_eso_and_keycloak_setup">4. Platform Foundation: K3d, Vault, ESO, and Keycloak Setup</a>
 <ul class="sectlevel2">
 <li><a href="#_provisioning_the_k3s_cluster">4.1. Provisioning the K3s Cluster</a></li>
 <li><a href="#_installing_vault">4.2. Installing Vault</a></li>
@@ -119,9 +119,10 @@
 <li><a href="#_deploying_keycloak">4.6. Deploying Keycloak</a></li>
 </ul>
 </li>
-<li><a href="#_best_practices_and_security_considerations">5. Best Practices and Security Considerations</a></li>
-<li><a href="#_references">6. References</a></li>
-<li><a href="#_list_of_figures">7. List of figures</a></li>
+<li><a href="#_deploying_a_go_application_with_vault_eso_and_keycloak_integration">5. Deploying a Go Application with Vault, ESO, and Keycloak Integration</a></li>
+<li><a href="#_best_practices_and_security_considerations">6. Best Practices and Security Considerations</a></li>
+<li><a href="#_references">7. References</a></li>
+<li><a href="#_list_of_figures">8. List of figures</a></li>
 </ul>
 </div>
 </div>
@@ -249,8 +250,11 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="_lab_guide">4. Lab Guide</h2>
+<h2 id="_platform_foundation_k3d_vault_eso_and_keycloak_setup">4. Platform Foundation: K3d, Vault, ESO, and Keycloak Setup</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>This section covers the essential components for secure identity and secrets management in Kubernetes.</p>
+</div>
 <div class="sect2">
 <h3 id="_provisioning_the_k3s_cluster">4.1. Provisioning the K3s Cluster</h3>
 <div class="paragraph">
@@ -303,7 +307,7 @@ k3s version v1.31.5-k3s1 (default)</span></code></pre>
 <div class="sect3">
 <h4 id="_step_2_create_the_k3s_cluster">4.1.2. Step 2: Create the K3s Cluster</h4>
 <div class="paragraph">
-<p>We&#8217;ll create a cluster with one server node and two agent nodes, exposing HTTPS (port 443) via the load balancer. We also disable the default Traefik ingress controller, as we will deploy our own services.</p>
+<p>We&#8217;ll create a cluster with one server node and two agent nodes, exposing ports 443 and 80 for the load balancer.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -311,7 +315,7 @@ k3s version v1.31.5-k3s1 (default)</span></code></pre>
   <span class="nt">--servers</span> 1 <span class="se">\</span>
   <span class="nt">--agents</span> 2 <span class="se">\</span>
   <span class="nt">--port</span> <span class="s2">"443:443@loadbalancer"</span> <span class="se">\</span>
-  <span class="nt">--k3s-arg</span> <span class="s2">"--disable=traefik@server:0"</span></code></pre>
+  <span class="nt">--port</span> <span class="s2">"80:80@loadbalancer"</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -560,34 +564,100 @@ kubectl <span class="nb">exec</span> <span class="nt">-it</span> vault-2 <span c
 </div>
 </div>
 <div class="sect3">
-<h4 id="_accessing_the_vault_ui">4.2.6. Accessing the Vault UI</h4>
+<h4 id="_accessing_the_vault_ui_via_ingress">4.2.6. Accessing the Vault UI via Ingress</h4>
 <div class="paragraph">
-<p>To access the Vault Web UI locally:</p>
+<p>To access the Vault Web UI using an Ingress controller (e.g. Traefik), we expose the Vault service externally by deploying a custom Ingress using our own Helm chart.</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Forward the UI service port:</p>
+<p>Make sure an Ingress controller like Traefik is deployed in your cluster.</p>
+</li>
+<li>
+<p>Deploy the Ingress pointing to the <code>vault-ui</code> service using the following Helm command:</p>
 </li>
 </ol>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="bash">kubectl port-forward svc/vault <span class="nt">-n</span> vault 8200:8200</code></pre>
+<pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> vault-ui-ingress ./helm/traefik/ingress <span class="se">\</span>
+  <span class="nt">--namespace</span> vault <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">name</span><span class="o">=</span>vault-ui-ingress <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">namespace</span><span class="o">=</span>vault <span class="se">\</span>
+  <span class="nt">--set</span> annotations.ingressClass<span class="o">=</span>traefik <span class="se">\</span>
+  <span class="nt">--set</span> spec.ingressClassName<span class="o">=</span>traefik <span class="se">\</span>
+  <span class="nt">--set</span> spec.rules.host<span class="o">=</span>vault.test <span class="se">\</span>
+  <span class="nt">--set</span> spec.rules.paths[0].path<span class="o">=</span><span class="s2">"/"</span> <span class="se">\</span>
+  <span class="nt">--set</span> spec.rules.paths[0].pathType<span class="o">=</span>Prefix <span class="se">\</span>
+  <span class="nt">--set</span> spec.rules.paths[0].backend.service.name<span class="o">=</span>vault-ui <span class="se">\</span>
+  <span class="nt">--set</span> spec.rules.paths[0].backend.service.port<span class="o">=</span>8200 <span class="se">\</span>
+  <span class="nt">--set</span> tls.enabled<span class="o">=</span><span class="nb">false</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This configuration:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Deploys a Kubernetes <code>Ingress</code> resource under the <code>vault</code> namespace</p>
+</li>
+<li>
+<p>Points to the <code>vault-ui</code> service on port <code>8200</code></p>
+</li>
+<li>
+<p>Uses Traefik as the Ingress controller</p>
+</li>
+<li>
+<p>Does <strong>not</strong> enable TLS (exposes via HTTP only)</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Add a DNS entry in your local <code>/etc/hosts</code> file to route <code>vault.test</code> to your local Ingress controller (typically <code>127.0.0.1</code>):</p>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">echo</span> <span class="s2">"127.0.0.1 vault.test"</span> | <span class="nb">sudo tee</span> <span class="nt">-a</span> /etc/hosts</code></pre>
 </div>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Open your browser and go to: <a href="http://localhost:8200" class="bare">http://localhost:8200</a></p>
+<p>Open your browser and go to: <a href="http://vault.test" target="_blank" rel="noopener">http://vault.test</a></p>
 </li>
 <li>
-<p>Log in using the <strong>Initial Root Token</strong> provided by <code>vault operator init</code>.</p>
+<p>Log in using the <strong>Initial Root Token</strong>.</p>
 </li>
 </ol>
 </div>
 <div class="paragraph">
-<p>You now have a fully working, HA-enabled Vault deployment backed by Raft storage, ready to be extended with namespaces and External Secrets.</p>
+<p>Vault is now accessible through an Ingress route, ready to be used with the rest of your platform.</p>
+</div>
+<div class="paragraph">
+<p>You can also access the Vault UI via port-forwarding:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">kubectl port-forward <span class="nt">-n</span> vault svc/vault-ui 8200:8200</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then visit: <a href="http://localhost:8200" class="bare">http://localhost:8200</a>
+Login using the <strong>Initial Root Token</strong>.</p>
+</div>
+<div class="paragraph">
+<p>After logging in, you should see the Vault UI dashboard</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/vaultUI.png" alt="Vault UI" width="600">
+</div>
+<div class="title">Figure 1. Vault dashboard</div>
 </div>
 </div>
 </div>
@@ -778,7 +848,7 @@ Each policy allows read-only access to the corresponding KV mount, ensuring stri
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="json"><span class="p">{</span><span class="w">
-  </span><span class="nl">"vault_addr"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://localhost:8200"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"vault_addr"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://vault.test"</span><span class="p">,</span><span class="w">
   </span><span class="nl">"vault_token"</span><span class="p">:</span><span class="w"> </span><span class="s2">"hvs.YourRootTokenHere"</span><span class="p">,</span><span class="w">
   </span><span class="nl">"kubernetes_host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://kubernetes.default.svc"</span><span class="p">,</span><span class="w">
   </span><span class="nl">"kubernetes_ca_cert"</span><span class="p">:</span><span class="w"> </span><span class="s2">"-----BEGIN CERTIFICATE-----</span><span class="se">\n</span><span class="s2">MIID...</span><span class="se">\n</span><span class="s2">-----END CERTIFICATE-----"</span><span class="p">,</span><span class="w">
@@ -891,7 +961,7 @@ terraform apply</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="bash"><span class="nb">export </span><span class="nv">VAULT_ADDR</span><span class="o">=</span>http://127.0.0.1:8200
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">export </span><span class="nv">VAULT_ADDR</span><span class="o">=</span>http://vault.test
 <span class="nb">export </span><span class="nv">VAULT_TOKEN</span><span class="o">=</span>hvs.YourRootTokenHere
 
 vault kv put secret-dev/example <span class="nv">username</span><span class="o">=</span><span class="s2">"admin"</span> <span class="nv">password</span><span class="o">=</span><span class="s2">"s3cr3t"</span>
@@ -990,7 +1060,7 @@ EOF</span></code></pre>
 <div class="content">
 <img src="images/vaultToken.png" alt="Vault token login response" width="600">
 </div>
-<div class="title">Figure 1. Vault token issued via Kubernetes authentication using vault-sa in dev namespace</div>
+<div class="title">Figure 2. Vault token issued via Kubernetes authentication using vault-sa in dev namespace</div>
 </div>
 </div>
 <div class="sect4">
@@ -1012,7 +1082,7 @@ EOF</span></code></pre>
 <div class="content">
 <img src="images/vaultSecret.png" alt="Vault token login response" width="600">
 </div>
-<div class="title">Figure 2. Secret retrieved from Vault using the token</div>
+<div class="title">Figure 3. Secret retrieved from Vault using the token</div>
 </div>
 </div>
 <div class="sect4">
@@ -1154,7 +1224,7 @@ external-secrets-webhook-5fc8544c4c-dld6m          1/1     Running   0          
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="bash">helm template vault-store <span class="nt">--namespace</span> dev helm/external-secrets/secretStore/ <span class="nt">--dry-run</span><span class="o">=</span>server | yq</code></pre>
+<pre class="rouge highlight"><code data-lang="bash">helm template vault <span class="nt">--namespace</span> dev helm/external-secrets/secretStore/ <span class="nt">--dry-run</span><span class="o">=</span>server | yq</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1187,7 +1257,7 @@ external-secrets-webhook-5fc8544c4c-dld6m          1/1     Running   0          
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> vault-store <span class="nt">--namespace</span> dev helm/external-secrets/secretStore/</code></pre>
+<pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> vault <span class="nt">--namespace</span> dev helm/external-secrets/secretStore/</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1294,7 +1364,7 @@ dev-credential   SecretStore   vault-store   1h                 SecretSynced   T
 <div class="content">
 <img src="images/syncedSecret.png" alt="Synced secret" width="450">
 </div>
-<div class="title">Figure 3. Vault secret synced to Kubernetes</div>
+<div class="title">Figure 4. Vault secret synced to Kubernetes</div>
 </div>
 </div>
 </div>
@@ -1352,7 +1422,7 @@ This prevents data loss across pod restarts and ensures the state of realms, use
   <span class="nt">--namespace</span> iam <span class="se">\</span>
   <span class="nt">--create-namespace</span> <span class="se">\</span>
   <span class="nt">--set</span> auth.adminUser<span class="o">=</span>admin <span class="se">\</span>
-  <span class="nt">--set</span> auth.adminPassword<span class="o">=</span><span class="s2">"N0TaRandomPassword"</span> <span class="se">\</span>
+  <span class="nt">--set</span> auth.adminPassword<span class="o">=</span>admin123 <span class="se">\</span>
   <span class="nt">--set</span> <span class="nv">proxy</span><span class="o">=</span>edge <span class="se">\</span>
   <span class="nt">--set</span> service.type<span class="o">=</span>ClusterIP <span class="se">\</span>
   <span class="nt">--set</span> postgresql.primary.persistence.enabled<span class="o">=</span><span class="nb">true</span> <span class="se">\</span>
@@ -1414,20 +1484,55 @@ keycloak-0   1/1     Running   0          1m</span></code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_4_access_the_keycloak_admin_ui_optional">4.6.5. 4. Access the Keycloak admin UI (optional)</h4>
+<h4 id="_4_access_the_keycloak_admin_ui_via_ingress">4.6.5. 4. Access the Keycloak Admin UI via Ingress</h4>
 <div class="paragraph">
-<p>You can access the Keycloak web UI by port-forwarding:</p>
+<p>To access the Keycloak web UI, we expose it externally using an Ingress resource instead of port-forwarding.
+This is consistent with the approach used for Vault and better simulates a real-world deployment.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Deploy the Ingress pointing to the <code>keycloak</code> service on port <code>8080</code> using the following Helm command:</p>
+</li>
+</ol>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="bash">kubectl port-forward svc/keycloak <span class="nt">-n</span> iam 8080:8080</code></pre>
+<pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> keycloak-ui-ingress ./helm/traefik/ingress <span class="se">\</span>
+  <span class="nt">--namespace</span> iam <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">name</span><span class="o">=</span>keycloak-ui-ingress <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">namespace</span><span class="o">=</span>iam <span class="se">\</span>
+  <span class="nt">--set</span> annotations.ingressClass<span class="o">=</span>traefik <span class="se">\</span>
+  <span class="nt">--set</span> spec.ingressClassName<span class="o">=</span>traefik <span class="se">\</span>
+  <span class="nt">--set</span> spec.rules.host<span class="o">=</span>keycloak.test <span class="se">\</span>
+  <span class="nt">--set</span> spec.rules.paths[0].path<span class="o">=</span><span class="s2">"/"</span> <span class="se">\</span>
+  <span class="nt">--set</span> spec.rules.paths[0].pathType<span class="o">=</span>Prefix <span class="se">\</span>
+  <span class="nt">--set</span> spec.rules.paths[0].backend.service.name<span class="o">=</span>keycloak <span class="se">\</span>
+  <span class="nt">--set</span> spec.rules.paths[0].backend.service.port<span class="o">=</span>80 <span class="se">\</span>
+  <span class="nt">--set</span> tls.enabled<span class="o">=</span><span class="nb">false</span></code></pre>
 </div>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Add an entry to your local <code>/etc/hosts</code> so the <code>keycloak.test</code> domain resolves to your Ingress controller:</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">echo</span> <span class="s2">"127.0.0.1 keycloak.test"</span> | <span class="nb">sudo tee</span> <span class="nt">-a</span> /etc/hosts</code></pre>
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Open your browser and navigate to: <a href="http://keycloak.test" target="_blank" rel="noopener">http://keycloak.test</a></p>
+</li>
+</ol>
 </div>
 <div class="paragraph">
-<p>Then visit: <a href="http://localhost:8080" class="bare">http://localhost:8080</a></p>
-</div>
-<div class="paragraph">
-<p>Login credentials:</p>
+<p>Login using:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -1439,34 +1544,27 @@ keycloak-0   1/1     Running   0          1m</span></code></pre>
 </li>
 </ul>
 </div>
-</div>
-<div class="sect3">
-<h4 id="_5_next_steps">4.6.6. 5. Next Steps</h4>
 <div class="paragraph">
-<p>We will later configure:</p>
+<p>You now have Keycloak accessible through Ingress, consistent with how Vault is exposed.</p>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p>A separate Realm for each environment (<code>dev</code>, <code>qa</code>, <code>prod</code>)</p>
-</li>
-<li>
-<p>Role-based access control (RBAC), users, clients, and groups</p>
-</li>
-<li>
-<p>Integration with Kubernetes and Vault (if needed)</p>
-</li>
-</ul>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/keycloakUI.png" alt="Keycloak UI" width="600">
 </div>
-<div class="paragraph">
-<p>These configurations will be applied manually or automated via CLI/REST/API in a future step.</p>
+<div class="title">Figure 5. User interface of Keycloak</div>
 </div>
 </div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_best_practices_and_security_considerations">5. Best Practices and Security Considerations</h2>
+<h2 id="_deploying_a_go_application_with_vault_eso_and_keycloak_integration">5. Deploying a Go Application with Vault, ESO, and Keycloak Integration</h2>
+<div class="sectionbody">
+
+</div>
+</div>
+<div class="sect1">
+<h2 id="_best_practices_and_security_considerations">6. Best Practices and Security Considerations</h2>
 <div class="sectionbody">
 <div class="ulist">
 <ul>
@@ -1490,7 +1588,7 @@ keycloak-0   1/1     Running   0          1m</span></code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_references">6. References</h2>
+<h2 id="_references">7. References</h2>
 <div class="sectionbody">
 <div class="ulist">
 <ul>
@@ -1514,7 +1612,7 @@ keycloak-0   1/1     Running   0          1m</span></code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_list_of_figures">7. List of figures</h2>
+<h2 id="_list_of_figures">8. List of figures</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>list-of::image[]</p>
