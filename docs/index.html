@@ -92,7 +92,7 @@
 <h1>Automating Secret Management with Vault Namespaces and External Secrets</h1>
 <div class="details">
 <span id="author" class="author">Wilmer Moina &amp; Diego Fernández</span><br>
-<span id="revdate">2025-04-13</span>
+<span id="revdate">2025-04-23</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -119,7 +119,11 @@
 <li><a href="#_deploying_keycloak">4.6. Deploying Keycloak</a></li>
 </ul>
 </li>
-<li><a href="#_deploying_a_go_application_with_vault_eso_and_keycloak_integration">5. Deploying a Go Application with Vault, ESO, and Keycloak Integration</a></li>
+<li><a href="#_deploying_a_go_application_with_vault_eso_and_keycloak_integration">5. Deploying a Go Application with Vault, ESO, and Keycloak Integration</a>
+<ul class="sectlevel2">
+<li><a href="#_create_realm_and_client_in_keycloak">5.1. Create Realm and Client in Keycloak</a></li>
+</ul>
+</li>
 <li><a href="#_best_practices_and_security_considerations">6. Best Practices and Security Considerations</a></li>
 <li><a href="#_references">7. References</a></li>
 <li><a href="#_list_of_figures">8. List of figures</a></li>
@@ -1156,7 +1160,7 @@ helm repo update</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_2_install_eso_in_the_external_secrets_namespace">4.5.3. 2. Install ESO in the <code>external-secrets</code> namespace</h4>
+<h4 id="_2_install_eso_in_the_external_secrets_namespace">4.5.3. 2. Install ESO in the external-secrets namespace</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> external-secrets external-secrets/external-secrets <span class="se">\</span>
@@ -1560,7 +1564,193 @@ This is consistent with the approach used for Vault and better simulates a real-
 <div class="sect1">
 <h2 id="_deploying_a_go_application_with_vault_eso_and_keycloak_integration">5. Deploying a Go Application with Vault, ESO, and Keycloak Integration</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>In this section, we will deploy a Go-based API that integrates with HashiCorp Vault, the External Secrets Operator (ESO), and Keycloak as the identity provider.</p>
+</div>
+<div class="paragraph">
+<p>The API will authenticate against a Keycloak client configured under separate realms for each environment: <code>dev</code>, <code>qa</code>, and <code>prod</code>.
+Each client’s credentials—specifically, the <code>client_id</code> and <code>client_secret</code>—will be securely stored in the corresponding Vault KV engine (<code>secret-dev</code>, <code>secret-qa</code>, <code>secret-prod</code>).</p>
+</div>
+<div class="paragraph">
+<p>To bridge Vault and Kubernetes, a <code>SecretStore</code> and <code>ExternalSecret</code> will be created in each namespace (<code>dev</code>, <code>qa</code>, <code>prod</code>).
+These resources enable ESO to fetch the credentials from Vault and project them into Kubernetes as native <code>Secret</code> objects.</p>
+</div>
+<div class="paragraph">
+<p>Once the secrets are synchronized, the API will be deployed within each namespace. It is designed to read the credentials dynamically from environment variables sourced via the synced secrets, and will be capable of responding to updates in real time—ensuring seamless rotation and propagation of secrets.</p>
+</div>
+<div class="paragraph">
+<p>This setup demonstrates a full-stack integration of secret management and identity, aligning with modern zero-trust principles and cloud-native architecture best practices.</p>
+</div>
+<div class="sect2">
+<h3 id="_create_realm_and_client_in_keycloak">5.1. Create Realm and Client in Keycloak</h3>
+<div class="paragraph">
+<p>In this step, we automate the creation of Keycloak realms, clients, and users using Ansible.
+This configuration is executed separately for each environment (<code>dev</code>, <code>qa</code>, <code>prod</code>) to enforce proper segregation and security boundaries.</p>
+</div>
+<div class="paragraph">
+<p>We use the following Ansible playbooks:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>realm.yml</code>: creates the Keycloak realm (e.g., <code>dev</code>, <code>qa</code>, <code>prod</code>)</p>
+</li>
+<li>
+<p><code>client.yml</code>: defines a Keycloak client inside that realm</p>
+</li>
+<li>
+<p><code>user.yml</code>: creates a set of users to authenticate into the application</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>These playbooks use a shared <code>values.yml</code> file to define reusable parameters such as client names, URIs, and user lists.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Before running the playbooks, ensure that Ansible is installed on your machine.
+You can install Ansible using <code>pip</code> or your system’s package manager.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="c"># For Ubuntu/Debian</span>
+<span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install </span>python3-pip <span class="nt">-y</span>
+pip3 <span class="nb">install</span> <span class="nt">--user</span> ansible
 
+<span class="c"># For macOS with Homebrew</span>
+brew <span class="nb">install </span>ansible</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Verify your installation with:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">ansible <span class="nt">--version</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>For more, visit: <a href="https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html" class="bare">https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html</a></p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_execute_per_environment">5.1.1. Execute per Environment</h4>
+<div class="paragraph">
+<p>To automate the creation of realms, clients, and users in Keycloak:</p>
+</div>
+<div class="paragraph">
+<p>Set the environment variable <code>THEENV</code> to the desired environment (<code>dev</code>, <code>qa</code>, or <code>prod</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">export </span><span class="nv">THEENV</span><span class="o">=</span>prod</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Run the playbooks using the <code>THEENV</code> variable to target the corresponding environment:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">ansible-playbook realm.yml <span class="se">\</span>
+  <span class="nt">-e</span> @values.yml <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">env_work</span><span class="o">=</span><span class="nv">$THEENV</span> <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">auth_username</span><span class="o">=</span>admin <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">auth_password</span><span class="o">=</span>admin123
+
+ansible-playbook client.yml <span class="se">\</span>
+  <span class="nt">-e</span> @values.yml <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">env_work</span><span class="o">=</span><span class="nv">$THEENV</span> <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">auth_username</span><span class="o">=</span>admin <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">auth_password</span><span class="o">=</span>admin123
+
+ansible-playbook user.yml <span class="se">\</span>
+  <span class="nt">-e</span> @values.yml <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">env_work</span><span class="o">=</span><span class="nv">$THEENV</span> <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">auth_username</span><span class="o">=</span>admin <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">auth_password</span><span class="o">=</span>admin123</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Repeat for each environment by setting <code>THEENV</code> accordingly.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Ensure the Keycloak instance is reachable at <code><a href="http://keycloak.test" class="bare">http://keycloak.test</a></code> before executing these playbooks.
+The realms, clients, and users will be created under their respective environments.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>After running the playbooks, locate the generated <code>client_id</code> and <code>client_secret</code> in the Ansible logs.
+Store them manually in Vault under the corresponding path for each environment:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>secret-dev/iam/idp_clients/sentinel-1</code></p>
+</li>
+<li>
+<p><code>secret-qa/iam/idp_clients/sentinel-1</code></p>
+</li>
+<li>
+<p><code>secret-prod/iam/idp_clients/sentinel-1</code></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Each secret must contain the keys:
+- <code>client_id</code>
+- <code>client_secret</code></p>
+</div>
+<div class="paragraph">
+<p>This ensures that credentials are securely stored for later retrieval via External Secrets Operator.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/keycloak-client-output.png" alt="Client credentials log" width="400">
+</div>
+<div class="title">Figure 6. Ansible output showing client credentials</div>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/vault-client-secret-sentinel.png" alt="Vault KV storage" width="840">
+</div>
+<div class="title">Figure 7. Credentials stored in Vault</div>
+</div>
+<div class="paragraph">
+<p>This step prepares the identity infrastructure for each isolated environment, supporting secure, token-based authentication in the Go-based API.</p>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -1623,7 +1813,7 @@ This is consistent with the approach used for Vault and better simulates a real-
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2025-04-13 14:12:46 +0200
+Last updated 2025-04-23 18:46:40 +0200
 </div>
 </div>
 </body>

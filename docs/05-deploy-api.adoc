@@ -1,0 +1,118 @@
+== Deploying a Go Application with Vault, ESO, and Keycloak Integration
+
+In this section, we will deploy a Go-based API that integrates with HashiCorp Vault, the External Secrets Operator (ESO), and Keycloak as the identity provider.
+
+The API will authenticate against a Keycloak client configured under separate realms for each environment: `dev`, `qa`, and `prod`.  
+Each client’s credentials—specifically, the `client_id` and `client_secret`—will be securely stored in the corresponding Vault KV engine (`secret-dev`, `secret-qa`, `secret-prod`).
+
+To bridge Vault and Kubernetes, a `SecretStore` and `ExternalSecret` will be created in each namespace (`dev`, `qa`, `prod`).  
+These resources enable ESO to fetch the credentials from Vault and project them into Kubernetes as native `Secret` objects.
+
+Once the secrets are synchronized, the API will be deployed within each namespace. It is designed to read the credentials dynamically from environment variables sourced via the synced secrets, and will be capable of responding to updates in real time—ensuring seamless rotation and propagation of secrets.
+
+This setup demonstrates a full-stack integration of secret management and identity, aligning with modern zero-trust principles and cloud-native architecture best practices.
+
+=== Create Realm and Client in Keycloak
+
+In this step, we automate the creation of Keycloak realms, clients, and users using Ansible.  
+This configuration is executed separately for each environment (`dev`, `qa`, `prod`) to enforce proper segregation and security boundaries.
+
+We use the following Ansible playbooks:
+
+- `realm.yml`: creates the Keycloak realm (e.g., `dev`, `qa`, `prod`)
+- `client.yml`: defines a Keycloak client inside that realm
+- `user.yml`: creates a set of users to authenticate into the application
+
+These playbooks use a shared `values.yml` file to define reusable parameters such as client names, URIs, and user lists.
+
+[NOTE]
+====
+Before running the playbooks, ensure that Ansible is installed on your machine.  
+You can install Ansible using `pip` or your system’s package manager.
+
+[source,bash]
+----
+# For Ubuntu/Debian
+sudo apt update
+sudo apt install python3-pip -y
+pip3 install --user ansible
+
+# For macOS with Homebrew
+brew install ansible
+----
+
+Verify your installation with:
+
+[source,bash]
+----
+ansible --version
+----
+For more, visit: https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
+====
+
+==== Execute per Environment
+
+To automate the creation of realms, clients, and users in Keycloak:
+
+Set the environment variable `THEENV` to the desired environment (`dev`, `qa`, or `prod`):
+
+[source,bash]
+----
+export THEENV=prod
+----
+
+Run the playbooks using the `THEENV` variable to target the corresponding environment:
+
+[source,bash]
+----
+ansible-playbook realm.yml \
+  -e @values.yml \
+  -e env_work=$THEENV \
+  -e auth_username=admin \
+  -e auth_password=admin123
+
+ansible-playbook client.yml \
+  -e @values.yml \
+  -e env_work=$THEENV \
+  -e auth_username=admin \
+  -e auth_password=admin123
+
+ansible-playbook user.yml \
+  -e @values.yml \
+  -e env_work=$THEENV \
+  -e auth_username=admin \
+  -e auth_password=admin123
+----
+
+Repeat for each environment by setting `THEENV` accordingly.
+
+[NOTE]
+====
+Ensure the Keycloak instance is reachable at `http://keycloak.test` before executing these playbooks.  
+The realms, clients, and users will be created under their respective environments.
+====
+
+[IMPORTANT]
+====
+After running the playbooks, locate the generated `client_id` and `client_secret` in the Ansible logs.  
+Store them manually in Vault under the corresponding path for each environment:
+
+- `secret-dev/iam/idp_clients/sentinel-1`
+- `secret-qa/iam/idp_clients/sentinel-1`
+- `secret-prod/iam/idp_clients/sentinel-1`
+
+Each secret must contain the keys:
+- `client_id`
+- `client_secret`
+
+This ensures that credentials are securely stored for later retrieval via External Secrets Operator.
+====
+
+.Ansible output showing client credentials
+image::images/keycloak-client-output.png[Client credentials log, width=400, align=center]
+
+.Credentials stored in Vault
+image::images/vault-client-secret-sentinel.png[Vault KV storage, width=840, align=center]
+
+
+This step prepares the identity infrastructure for each isolated environment, supporting secure, token-based authentication in the Go-based API.

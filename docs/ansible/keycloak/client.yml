@@ -1,0 +1,64 @@
+- name: Configure Keycloak - Client 
+  hosts: localhost
+
+  tasks:
+    - ansible.builtin.import_tasks:
+        file: auth_token.yml
+
+    - name: Create or Update Client
+      community.general.keycloak_client:
+        # --- Authentication ---
+        auth_client_id: "{{ auth_client_id  }}"
+        auth_keycloak_url: "{{ keycloak_url }}"
+        token: "{{ keycloak_token }}"
+        # --- Config ---
+        client_id: "{{ client_id }}"
+        realm: "{{ realm_name }}"
+        name: "{{ client_name }}"
+        description: "Client for {{ client_name }}"
+        baseUrl: "{{ baseUrl | default('') }}"
+        redirect_uris: "{{ redirect_uris | default(['']) }}"
+        web_origins: "{{ web_origins | default(['']) }}"
+        client_authenticator_type: client-secret
+        enabled: true
+        directAccessGrantsEnabled: "{{ direct_access_grants_enabled | default(false) }}"
+        publicClient: "{{ publicClient }}" 
+        frontchannelLogout: "{{ frontchannelLogout | default(true) }}"
+        authorizationServicesEnabled: "{{ authorizationServicesEnabled | default(false) }}"
+        serviceAccountsEnabled: "{{ serviceAccountsEnabled | default(false) }}"
+        standardFlowEnabled: "{{ standardFlowEnabled | default(true) }}"
+        always_display_in_console: false
+        state: present
+        consentRequired: true
+        attributes:
+         login_theme:  keycloak
+         display.on.consent.screen: "true"
+      register: client_kc
+      no_log: "{{ lock_log | default(true )}}"
+
+    - name: Degug Client
+      ansible.builtin.debug:
+        var: client_kc
+      no_log: "{{ lock_log | default(true )}}"
+
+    - name: Get a Client Secret
+      community.general.keycloak_clientsecret_info:
+        id: "{{ client_kc.end_state.id }}"
+        auth_keycloak_url: "{{ keycloak_url }}"
+        auth_realm: "{{ auth_realm }}"
+        auth_username: "{{ auth_username }}"
+        auth_password: "{{ auth_password }}"
+        validate_certs: "{{ validate_certs }}"
+        realm: "{{ realm_name }}"
+      register: client_secret
+      no_log: "{{ lock_log | default(true )}}"
+      when: not publicClient
+
+    - name: Debug Credentials
+      ansible.builtin.debug:
+        msg:
+          - "🔐 Keycloak Client Credentials"
+          - "Environment      : {{ realm_name }}"
+          - "Client ID        : {{ client_id }}"
+          - "Client Secret    : {{ client_secret.clientsecret_info.value }}"
+      when: not publicClient

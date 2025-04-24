@@ -1,0 +1,35 @@
+- name: Configure Keycloak - Users 
+  hosts: localhost
+  become: false
+  gather_facts: true
+  gather_subset:
+    - hardware
+
+  tasks:
+    - name: Import Token for Service Keycloak
+      include_tasks: auth_token.yml
+      
+    - name: Create Global Users
+      community.general.keycloak_user:
+        # --- Authentication ---
+        auth_client_id: "{{ auth_client_id  }}"
+        auth_keycloak_url: "{{ keycloak_url }}"
+        token: "{{ keycloak_token }}"
+        validate_certs: false
+        # --- Config ---
+        realm: "{{ realm_name }}"
+        username: "{{ item.username }}"
+        firstName: "{{ item.firstName | default('') }}"
+        lastName: "{{ item.lastName | default('') }}"
+        email: "{{ item.email }}"
+        enabled: "{{ item.enabled | default(false) }}"
+        emailVerified: "{{ item.emailVerified | default(false) }}"
+        requiredActions: "{{ item.requiredActions | default(['']) }}"
+        credentials:
+            - type: password
+              value: "{{ item.password }}"
+              temporary: "{{ item.temporary | default(false) }}"
+        groups: "{{ item.groups | default([]) }}"
+        state: present
+      loop: "{{ users }}"
+      no_log: "{{ lock_log | default(true )}}"

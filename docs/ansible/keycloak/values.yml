@@ -1,0 +1,49 @@
+# Env_work configuration
+env_work: dev
+api_name: sentinel-1
+
+# Debug mode
+lock_log: true
+
+# Authentication configuration # USE temporal token 
+keycloak_url: "http://keycloak.test"
+auth_realm: master
+
+auth_username: "{{ auth_username }}"
+auth_password: "{{ auth_password }}"
+validate_certs: false
+auth_client_id: admin-cli
+
+# Realm configuration
+realm_id: '{{ env_work }}'
+realm_name: '{{ env_work }}'
+
+# Client configuration
+client_id: "{{ api_name }}"
+client_name: "{{ api_name }}"
+publicClient: false    
+baseUrl: http://{{ api_name }}-{{ env_work }}.test
+redirect_uris:
+  - http://{{ api_name }}-{{ env_work }}.test/callback/*
+web_origins:
+  - http://{{ api_name }}-{{ env_work }}.test
+
+# Users configuration
+users:
+  - username: testuser1
+    firstName: Test
+    lastName: UserOne
+    email: testuser1@example.com
+    password: test123
+    enabled: true
+    emailVerified: true
+    temporary: false
+
+  - username: testuser2
+    firstName: Test
+    lastName: UserTwo
+    email: testuser2@example.com
+    password: test123
+    enabled: true
+    emailVerified: true
+    temporary: false

@@ -15,9 +15,10 @@
 include::01-introduction.adoc[]
 include::02-objectives.adoc[]
 include::03-environment.adoc[]
-include::04-lab-guide.adoc[]
-include::05-best-practices.adoc[]
-include::06-references.adoc[]
+include::04-platform-foundation.adoc[]
+include::05-deploy-api.adoc[]
+include::06-best-practices.adoc[]
+include::07-references.adoc[]
 
 == List of figures
 list-of::image[]

@@ -1,0 +1,25 @@
+- name: Configure Keycloak - Realm
+  hosts: localhost
+  become: false
+  gather_facts: true
+  gather_subset:
+    - hardware
+
+  tasks:
+    - name: Import Token for Service Keycloak
+      include_tasks: auth_token.yml
+        
+    - name: Create Realm 
+      community.general.keycloak_realm:
+        # --- Authentication ---
+        auth_client_id: "{{ auth_client_id  }}"
+        auth_keycloak_url: "{{ keycloak_url }}"
+        token: "{{ keycloak_token }}"
+        validate_certs: "{{ validate_certs }}"
+        # --- Config ---
+        id: "{{ realm_id }}"
+        realm: "{{ realm_name }}"
+        state: present
+        enabled: true
+      no_log: "{{ lock_log | default( true )}}"
+    
