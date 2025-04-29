@@ -1,8 +1,18 @@
 
 == References
 
-- https://developer.hashicorp.com/vault/docs
-- https://external-secrets.io
-- https://k3d.io
-- https://helm.sh
-- https://www.keycloak.org
+The following official documentation sources were referenced throughout this seminar:
+
+- https://developer.hashicorp.com/vault[HashiCorp Vault Documentation, window="_blank"]
+- https://external-secrets.io[External Secrets Operator (ESO), window="_blank"]
+- https://k3d.io[K3d Documentation, window="_blank"]
+- https://helm.sh[Helm Documentation, window="_blank"]
+- https://www.keycloak.org[Keycloak Documentation, window="_blank"]
+- https://www.terraform.io/docs[Terraform Documentation, window="_blank"]
+- https://docs.ansible.com[Ansible Documentation, window="_blank"]
+- https://kubernetes.io[Kubernetes Documentation, window="_blank"]
+
+Additional resources:
+
+- https://developer.hashicorp.com/vault/tutorials/kubernetes[Kubernetes + Vault Tutorials, window="_blank"]
+- https://artifacthub.io/packages/helm/bitnami/keycloak[Bitnami Keycloak Helm Chart, window="_blank"] 

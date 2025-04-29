@@ -1,11 +1,12 @@
 
 == Platform Foundation: K3d, Vault, ESO, and Keycloak Setup
 
-This section covers the essential components for secure identity and secrets management in Kubernetes.
+The following components form the technical foundation for deploying secure, multi-environment secret management and authentication platforms within Kubernetes.  
+This section provides a structured setup to ensure isolation, scalability, and reproducibility across the environments `dev`, `qa`, and `prod`.
 
 === Provisioning the K3s Cluster
 
-In this section, we will provision a local Kubernetes cluster using `k3d`, a lightweight wrapper that runs K3s inside Docker containers. This approach is particularly suitable for local development environments, hands-on labs, and CI pipelines due to its simplicity and speed.
+K3s is a lightweight Kubernetes distribution optimized for resource-constrained environments and rapid prototyping. k3d further simplifies deployment by running K3s clusters inside Docker containers, enabling easy resets, snapshots, and multi-node simulations without VM overhead.
 
 ==== Step 1: Install K3d
 
@@ -129,7 +130,7 @@ The configuration:
 
 - Enables Raft storage with automatic `retry_join`.
 
-- Disables TLS for simplicity (not recommended for production).
+- In this seminar, TLS is disabled for Vault for simplicity and local accessibility.  **In production environments, always enable TLS** to protect secret communications.
 
 - Exposes the Vault UI using a LoadBalancer service.
 
@@ -364,7 +365,7 @@ This ensures that only authorized workloads can request secrets from the correct
 
 ==== Providing Vault and Kubernetes Credentials
 
-To securely configure Vault with Kubernetes authentication, we use a `.tfvars.json` file to provide all sensitive variables required by Terraform.
+To securely configure Vault with Kubernetes authentication, we supply Terraform with the necessary sensitive variables via a `.auto.tfvars.json` file. This format ensures that variables are automatically discovered during `terraform apply`, avoiding the need for manual input via CLI arguments or environment variables. It also promotes reproducibility and reduces the likelihood of human error in automation pipelines. Additionally, the `.json` format is ideal for handling complex or multiline values such as certificates and JWT tokens.
 
 Create the file `secrets.auto.tfvars.json` inside `terraform/vault/` with the following content:
 
@@ -385,6 +386,13 @@ Terraform automatically loads all files ending in `.auto.tfvars.json`, so there'
 ====
 
 ==== How to Obtain the Required Values
+
+Vault's Kubernetes authentication method relies on validating ServiceAccount JWT tokens presented by pods in the cluster. To establish trust, Vault must be configured with:
+
+- The Kubernetes cluster’s public CA certificate (used to verify the API server's TLS identity).
+- A valid ServiceAccount JWT token (used to authenticate incoming pod identities).
+
+These credentials are typically retrieved from within a pod that has access to the Kubernetes API. By capturing them directly from a running pod, we ensure compatibility with the in-cluster configuration and secure communication with the Kubernetes control plane.
 
 These values can be extracted from any running pod in your cluster, such as `vault-0`.
 
@@ -556,8 +564,8 @@ You can capture this output as a screenshot to include in the lab report or Medi
 
 === Installing External Secrets Operator (ESO)
 
-In this section, we install the External Secrets Operator (ESO), which synchronizes secrets from Vault into native Kubernetes `Secret` objects.  
-This allows Kubernetes workloads to consume secrets managed in Vault without requiring application-level changes.
+The External Secrets Operator (ESO) is a Kubernetes-native controller that enables secure integration between external secret stores—such as Vault—and Kubernetes.  
+It allows secrets managed in Vault to be automatically synchronized and projected as native Kubernetes `Secret` resources, supporting versioned updates, fine-grained access control, and declarative secret management.
 
 ==== Recommended Resources
 
@@ -615,7 +623,7 @@ All components should report `READY 1/1` and `STATUS Running`. If not, inspect l
 
 ==== 4. Create a SecretStore in each environment namespace
 
-Each namespace (`dev`, `qa`, `prod`) must define a `SecretStore` resource that configures Vault access using Kubernetes authentication.
+Each namespace (`dev`, `qa`, `prod`) requires its own `SecretStore` resource to define how ESO authenticates with Vault via Kubernetes.
 
 To preview the manifest using Helm templating:
 
@@ -670,11 +678,11 @@ NAME          AGE   STATUS   CAPABILITIES   READY
 vault-store   48s   Valid    ReadWrite      True
 ----
 
-==== 5. Define an ExternalSecret to sync data from Vault
+==== 5. Create ExternalSecrets to Sync Vault Data
 
-An `ExternalSecret` defines how ESO should fetch data from Vault and write it into a Kubernetes `Secret`.
+The `ExternalSecret` resource defines how ESO fetches data from Vault and creates a corresponding Kubernetes `Secret`.
 
-To preview:
+Preview the manifest:
 
 [source,bash]
 ----
@@ -741,15 +749,17 @@ Once synced, ESO creates a Kubernetes `Secret` with the desired values.
 kubectl get secret synced-dev-credential -n dev -o jsonpath='{.data}' | jq
 ----
 
-You should see both `username` and `password` encoded in base64.
+The output should include both `username` and `password` keys encoded in base64.
 
 .Vault secret synced to Kubernetes
 image::images/syncedSecret.png[Synced secret, width=450, align=center]
 
 === Deploying Keycloak
 
-In this section, we deploy a single instance of Keycloak into the `iam` namespace using the Bitnami Helm chart.  
-This Keycloak instance will later host one Realm per environment (`dev`, `qa`, `prod`), acting as the centralized Identity Provider for the platform.
+Keycloak is an open-source Identity and Access Management (IAM) platform that also supports Customer Identity and Access Management (CIAM) use cases.  
+It provides authentication, authorization, and identity federation capabilities suitable for both internal service identities and external user access.
+
+In this seminar, Keycloak serves as the central Identity Provider (IdP), hosting separate realms for each environment (`dev`, `qa`, `prod`) to isolate identity domains across namespaces.
 
 ==== Recommended Resources
 
@@ -770,8 +780,7 @@ helm repo update
 
 ==== 2. Deploy Keycloak in the `iam` namespace (with persistence)
 
-We deploy Keycloak with an embedded PostgreSQL database and persistent storage enabled.  
-This prevents data loss across pod restarts and ensures the state of realms, users, and configurations is retained.
+Keycloak will be deployed using the Bitnami Helm chart, which includes PostgreSQL as a subchart for simplicity. This co-deployment enables data persistence across restarts.
 
 [source,bash]
 ----
@@ -816,10 +825,9 @@ keycloak-0   1/1     Running   0          1m
 
 ==== 4. Access the Keycloak Admin UI via Ingress
 
-To access the Keycloak web UI, we expose it externally using an Ingress resource instead of port-forwarding.  
-This is consistent with the approach used for Vault and better simulates a real-world deployment.
+Keycloak is exposed externally via a dedicated Kubernetes Ingress resource, using Traefik as the Ingress controller.
 
-. Deploy the Ingress pointing to the `keycloak` service on port `8080` using the following Helm command:
+. Deploy the Ingress pointing to the `keycloak` service on port `80` using the following Helm command:
 
 [source,bash]
 ----

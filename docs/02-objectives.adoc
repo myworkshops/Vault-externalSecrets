@@ -1,16 +1,20 @@
 
 == Seminar Objectives
 
-The main goal of this seminar is to teach students how to automate secure secret management in Kubernetes using Vault and External Secrets.
+The primary objective of this seminar is to enable students to design, automate, and operate a secure, cloud-native secrets management platform using HashiCorp Vault and the External Secrets Operator (ESO) within Kubernetes.
 
-=== Key Outcomes
+Participants will gain practical experience in building a multi-environment setup aligned with zero-trust security principles and modern cloud best practices.
 
-- Deploy a lightweight K3s cluster locally using `k3d`.
-- Install HashiCorp Vault using Helm with support for multiple namespaces.
-- Configure different Kubernetes namespaces for Dev, QA, and Prod.
-- Deploy one Keycloak instance per namespace, each with its own Realm and Client.
-- Use External Secrets Operator to:
-  * Fetch secrets from Vault.
-  * Inject them into Kubernetes workloads.
-  * Automatically sync updates when Vault values change.
-- Automate this setup using Terraform and Ansible.
+=== Key Learning Outcomes
+
+Upon completion of this seminar, students will be able to:
+
+- Provision a lightweight Kubernetes cluster using `k3d` for local development.
+- Deploy HashiCorp Vault via Helm, configured for high availability and logical namespace isolation.
+- Design and configure Kubernetes namespaces (`dev`, `qa`, `prod`) for multi-environment separation.
+- Deploy a centralized Keycloak instance, managing separate realms and clients per environment.
+- Configure and utilize the External Secrets Operator to:
+  * Retrieve secrets securely from Vault.
+  * Inject secrets into Kubernetes workloads.
+  * Synchronize secret updates automatically as Vault values change.
+- Automate the end-to-end deployment and configuration using Terraform and Ansible.

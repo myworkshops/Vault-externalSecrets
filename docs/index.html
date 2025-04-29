@@ -92,7 +92,7 @@
 <h1>Automating Secret Management with Vault Namespaces and External Secrets</h1>
 <div class="details">
 <span id="author" class="author">Wilmer Moina &amp; Diego Fernández</span><br>
-<span id="revdate">2025-04-23</span>
+<span id="revdate">2025-04-27</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -100,33 +100,41 @@
 <li><a href="#_introduction">1. Introduction</a></li>
 <li><a href="#_seminar_objectives">2. Seminar Objectives</a>
 <ul class="sectlevel2">
-<li><a href="#_key_outcomes">2.1. Key Outcomes</a></li>
+<li><a href="#_key_learning_outcomes">2.1. Key Learning Outcomes</a></li>
+<li><a href="#_tools_and_technologies">2.2. Tools and Technologies</a></li>
+<li><a href="#_system_prerequisites">2.3. System Prerequisites</a></li>
+<li><a href="#_tool_version_matrix">2.4. Tool Version Matrix</a></li>
 </ul>
 </li>
-<li><a href="#_environment_and_tooling">3. Environment and Tooling</a>
+<li><a href="#_platform_foundation_k3d_vault_eso_and_keycloak_setup">3. Platform Foundation: K3d, Vault, ESO, and Keycloak Setup</a>
 <ul class="sectlevel2">
-<li><a href="#_tools_used">3.1. Tools Used</a></li>
-<li><a href="#_system_requirements">3.2. System Requirements</a></li>
+<li><a href="#_provisioning_the_k3s_cluster">3.1. Provisioning the K3s Cluster</a></li>
+<li><a href="#_installing_vault">3.2. Installing Vault</a></li>
+<li><a href="#_preparing_kubernetes_namespaces_and_workloads">3.3. Preparing Kubernetes Namespaces and Workloads</a></li>
+<li><a href="#_configuring_vault">3.4. Configuring Vault</a></li>
+<li><a href="#_installing_external_secrets_operator_eso">3.5. Installing External Secrets Operator (ESO)</a></li>
+<li><a href="#_deploying_keycloak">3.6. Deploying Keycloak</a></li>
 </ul>
 </li>
-<li><a href="#_platform_foundation_k3d_vault_eso_and_keycloak_setup">4. Platform Foundation: K3d, Vault, ESO, and Keycloak Setup</a>
+<li><a href="#_deploying_sentinel1_api_with_vault_eso_and_keycloak_integration">4. Deploying Sentinel‑1 API with Vault, ESO, and Keycloak Integration</a>
 <ul class="sectlevel2">
-<li><a href="#_provisioning_the_k3s_cluster">4.1. Provisioning the K3s Cluster</a></li>
-<li><a href="#_installing_vault">4.2. Installing Vault</a></li>
-<li><a href="#_preparing_kubernetes_namespaces_and_workloads">4.3. Preparing Kubernetes Namespaces and Workloads</a></li>
-<li><a href="#_configuring_vault">4.4. Configuring Vault</a></li>
-<li><a href="#_installing_external_secrets_operator_eso">4.5. Installing External Secrets Operator (ESO)</a></li>
-<li><a href="#_deploying_keycloak">4.6. Deploying Keycloak</a></li>
+<li><a href="#_automating_keycloak_realm_client_and_user_provisioning">4.1. Automating Keycloak Realm, Client, and User Provisioning</a></li>
+<li><a href="#_keycloak_configuration_validation_optional">4.2. Keycloak Configuration Validation (Optional)</a></li>
+<li><a href="#_deploying_sentinel1_api_with_vault_eso_and_keycloak_integration_2">4.3. Deploying Sentinel‑1 API with Vault, ESO, and Keycloak Integration</a></li>
+<li><a href="#_verifying_the_end_to_end_platform_setup">4.4. Verifying the End-to-End Platform Setup</a></li>
 </ul>
 </li>
-<li><a href="#_deploying_a_go_application_with_vault_eso_and_keycloak_integration">5. Deploying a Go Application with Vault, ESO, and Keycloak Integration</a>
+<li><a href="#_best_practices_and_security_considerations">5. Best Practices and Security Considerations</a>
 <ul class="sectlevel2">
-<li><a href="#_create_realm_and_client_in_keycloak">5.1. Create Realm and Client in Keycloak</a></li>
+<li><a href="#_authentication_and_token_management">5.1. Authentication and Token Management</a></li>
+<li><a href="#_access_control_and_segmentation">5.2. Access Control and Segmentation</a></li>
+<li><a href="#_infrastructure_security">5.3. Infrastructure Security</a></li>
+<li><a href="#_secret_synchronization_and_monitoring">5.4. Secret Synchronization and Monitoring</a></li>
+<li><a href="#_final_recommendations">5.5. Final Recommendations</a></li>
 </ul>
 </li>
-<li><a href="#_best_practices_and_security_considerations">6. Best Practices and Security Considerations</a></li>
-<li><a href="#_references">7. References</a></li>
-<li><a href="#_list_of_figures">8. List of figures</a></li>
+<li><a href="#_references">6. References</a></li>
+<li><a href="#_list_of_figures">7. List of figures</a></li>
 </ul>
 </div>
 </div>
@@ -135,26 +143,44 @@
 <h2 id="_introduction">1. Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>HashiCorp Vault is a highly flexible tool for managing secrets, encryption keys, and access policies. With the introduction of <em>Vault Namespaces</em>, organizations can isolate teams, environments, or tenants with fully independent Vault environments, all within the same cluster.</p>
+<p>In modern cloud-native architectures, secure and scalable secret management is a critical requirement. Organizations increasingly operate multi-tenant Kubernetes clusters and microservices that demand isolated access to sensitive credentials, encryption keys, and configuration data. Solutions must align with zero-trust principles while ensuring operational simplicity and compliance.</p>
 </div>
 <div class="paragraph">
-<p>On the other hand, the <em>External Secrets Operator (ESO)</em> allows Kubernetes-native integration with external secret stores, such as Vault, AWS Secrets Manager, and others, enabling secure and declarative secret management.</p>
+<p>HashiCorp Vault is a highly flexible and extensible tool for managing secrets, encryption keys, and access policies. With the introduction of <em>Vault Namespaces</em> (Enterprise feature), Vault enables full logical isolation for different teams, environments, or tenants within a single deployment.</p>
 </div>
 <div class="paragraph">
-<p>This seminar explores how to:</p>
+<p>Complementing this, the <em>External Secrets Operator (ESO)</em> provides Kubernetes-native integration with external secret stores like Vault, AWS Secrets Manager, and others. ESO enables secure, declarative secret synchronization into Kubernetes clusters, supporting dynamic secret rotation and fine-grained access control.</p>
+</div>
+<div class="paragraph">
+<p>Keycloak serves as the centralized Identity Provider (IdP) within the seminar&#8217;s architecture, managing authentication flows and user identities.</p>
+</div>
+<div class="paragraph">
+<p>This seminar focuses on demonstrating a complete, automated workflow to:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Provision a K3s cluster.</p>
+<p>Provision a lightweight K3s Kubernetes cluster suitable for labs and development.</p>
 </li>
 <li>
-<p>Deploy Vault with multiple namespaces.</p>
+<p>Deploy Vault configured for high availability and simulated namespaces using KV backends.</p>
 </li>
 <li>
-<p>Use External Secrets Operator to sync and inject secrets into different Kubernetes namespaces.</p>
+<p>Integrate Vault with Kubernetes authentication per namespace.</p>
+</li>
+<li>
+<p>Install and configure the External Secrets Operator.</p>
+</li>
+<li>
+<p>Deploy a practical Go-based API (Sentinel‑1) that consumes secrets and authenticates users via Keycloak.</p>
 </li>
 </ul>
+</div>
+<div class="paragraph">
+<p>Keycloak will be configured as the centralized Identity Provider (IdP) to manage authentication flows, realms, clients, and user identities across all environments (<code>dev</code>, <code>qa</code>, and <code>prod</code>).</p>
+</div>
+<div class="paragraph">
+<p>Throughout the seminar, we emphasize reproducibility, security best practices, and real-world applicability, offering students a hands-on, industry-aligned experience.</p>
 </div>
 </div>
 </div>
@@ -162,110 +188,207 @@
 <h2 id="_seminar_objectives">2. Seminar Objectives</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The main goal of this seminar is to teach students how to automate secure secret management in Kubernetes using Vault and External Secrets.</p>
+<p>The primary objective of this seminar is to enable students to design, automate, and operate a secure, cloud-native secrets management platform using HashiCorp Vault and the External Secrets Operator (ESO) within Kubernetes.</p>
+</div>
+<div class="paragraph">
+<p>Participants will gain practical experience in building a multi-environment setup aligned with zero-trust security principles and modern cloud best practices.</p>
 </div>
 <div class="sect2">
-<h3 id="_key_outcomes">2.1. Key Outcomes</h3>
+<h3 id="_key_learning_outcomes">2.1. Key Learning Outcomes</h3>
+<div class="paragraph">
+<p>Upon completion of this seminar, students will be able to:</p>
+</div>
 <div class="ulist">
 <ul>
 <li>
-<p>Deploy a lightweight K3s cluster locally using <code>k3d</code>.</p>
+<p>Provision a lightweight Kubernetes cluster using <code>k3d</code> for local development.</p>
 </li>
 <li>
-<p>Install HashiCorp Vault using Helm with support for multiple namespaces.</p>
+<p>Deploy HashiCorp Vault via Helm, configured for high availability and logical namespace isolation.</p>
 </li>
 <li>
-<p>Configure different Kubernetes namespaces for Dev, QA, and Prod.</p>
+<p>Design and configure Kubernetes namespaces (<code>dev</code>, <code>qa</code>, <code>prod</code>) for multi-environment separation.</p>
 </li>
 <li>
-<p>Deploy one Keycloak instance per namespace, each with its own Realm and Client.</p>
+<p>Deploy a centralized Keycloak instance, managing separate realms and clients per environment.</p>
 </li>
 <li>
-<p>Use External Secrets Operator to:</p>
+<p>Configure and utilize the External Secrets Operator to:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>Fetch secrets from Vault.</p>
+<p>Retrieve secrets securely from Vault.</p>
 </li>
 <li>
-<p>Inject them into Kubernetes workloads.</p>
+<p>Inject secrets into Kubernetes workloads.</p>
 </li>
 <li>
-<p>Automatically sync updates when Vault values change.</p>
+<p>Synchronize secret updates automatically as Vault values change.</p>
 </li>
 </ul>
 </div>
 </li>
 <li>
-<p>Automate this setup using Terraform and Ansible.</p>
+<p>Automate the end-to-end deployment and configuration using Terraform and Ansible.
+== Environment and Tooling</p>
 </li>
 </ul>
 </div>
+<div class="paragraph">
+<p>This seminar is designed to be executed in a local development environment that closely simulates production-grade Kubernetes deployments.
+Participants are expected to provision and configure the necessary tools to automate the entire secrets management lifecycle.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_tools_and_technologies">2.2. Tools and Technologies</h3>
+<div class="paragraph">
+<p>The following tools and platforms are required:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Docker</strong>: Container runtime engine (using Docker Desktop for macOS or Ubuntu).</p>
+</li>
+<li>
+<p><strong>k3d</strong>: Lightweight wrapper to run K3s (Kubernetes) clusters inside Docker.</p>
+</li>
+<li>
+<p><strong>Helm</strong>: Kubernetes package manager for deploying Vault, Keycloak, and ESO charts.</p>
+</li>
+<li>
+<p><strong>Terraform</strong>: Infrastructure as Code (IaC) tool for automating Vault and Kubernetes resources.</p>
+</li>
+<li>
+<p><strong>Ansible</strong>: Configuration management and orchestration for Keycloak and Vault setups.</p>
+</li>
+<li>
+<p><strong>External Secrets Operator (ESO)</strong>: Kubernetes controller to synchronize secrets from Vault.</p>
+</li>
+<li>
+<p><strong>HashiCorp Vault</strong>: Centralized secrets management and encryption service.</p>
+</li>
+<li>
+<p><strong>Keycloak</strong>: Identity and Access Management (IAM) solution for authentication and authorization.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_system_prerequisites">2.3. System Prerequisites</h3>
+<div class="paragraph">
+<p>Participants should have the following baseline environment:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A computer running macOS or Ubuntu with at least <strong>8 GB of RAM</strong>.</p>
+</li>
+<li>
+<p>Docker installed and running.</p>
+</li>
+<li>
+<p>Internet access to pull container images, Helm charts, and package dependencies.</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>It is highly recommended to use the latest stable versions of Docker, Helm, Terraform, and Ansible to ensure compatibility with the provided instructions.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_tool_version_matrix">2.4. Tool Version Matrix</h3>
+<div class="paragraph">
+<p>The following table summarizes the versions used during the development and validation of this seminar:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Tool</th>
+<th class="tableblock halign-left valign-top">Version Tested</th>
+<th class="tableblock halign-left valign-top">Official Documentation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Docker</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">28.1.1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://www.docker.com/" class="bare">https://www.docker.com/</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helm</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v3.17.3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://helm.sh/" class="bare">https://helm.sh/</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Terraform</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v1.11.3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://developer.hashicorp.com/terraform" class="bare">https://developer.hashicorp.com/terraform</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Ansible</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">core 2.18.5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://docs.ansible.com/" class="bare">https://docs.ansible.com/</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">k3d</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v5.8.3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://k3d.io/" class="bare">https://k3d.io/</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kubernetes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v1.31.5+k3s1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://kubernetes.io/" class="bare">https://kubernetes.io/</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">External Secrets Operator (ESO)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v0.16.1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://external-secrets.io/" class="bare">https://external-secrets.io/</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HashiCorp Vault</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.19.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://developer.hashicorp.com/vault" class="bare">https://developer.hashicorp.com/vault</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Keycloak</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">26.2.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://www.keycloak.org/" class="bare">https://www.keycloak.org/</a></p></td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_environment_and_tooling">3. Environment and Tooling</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="_tools_used">3.1. Tools Used</h3>
-<div class="ulist">
-<ul>
-<li>
-<p>Docker (with Docker Desktop on macOS)</p>
-</li>
-<li>
-<p>k3d (K3s in Docker)</p>
-</li>
-<li>
-<p>Helm</p>
-</li>
-<li>
-<p>Terraform</p>
-</li>
-<li>
-<p>Ansible</p>
-</li>
-<li>
-<p>External Secrets Operator</p>
-</li>
-<li>
-<p>HashiCorp Vault</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_system_requirements">3.2. System Requirements</h3>
-<div class="ulist">
-<ul>
-<li>
-<p>macOS or Ubuntu with at least 8 GB RAM</p>
-</li>
-<li>
-<p>Docker installed and running</p>
-</li>
-<li>
-<p>Internet access to pull container images and charts</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_platform_foundation_k3d_vault_eso_and_keycloak_setup">4. Platform Foundation: K3d, Vault, ESO, and Keycloak Setup</h2>
+<h2 id="_platform_foundation_k3d_vault_eso_and_keycloak_setup">3. Platform Foundation: K3d, Vault, ESO, and Keycloak Setup</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This section covers the essential components for secure identity and secrets management in Kubernetes.</p>
+<p>The following components form the technical foundation for deploying secure, multi-environment secret management and authentication platforms within Kubernetes.
+This section provides a structured setup to ensure isolation, scalability, and reproducibility across the environments <code>dev</code>, <code>qa</code>, and <code>prod</code>.</p>
 </div>
 <div class="sect2">
-<h3 id="_provisioning_the_k3s_cluster">4.1. Provisioning the K3s Cluster</h3>
+<h3 id="_provisioning_the_k3s_cluster">3.1. Provisioning the K3s Cluster</h3>
 <div class="paragraph">
-<p>In this section, we will provision a local Kubernetes cluster using <code>k3d</code>, a lightweight wrapper that runs K3s inside Docker containers. This approach is particularly suitable for local development environments, hands-on labs, and CI pipelines due to its simplicity and speed.</p>
+<p>K3s is a lightweight Kubernetes distribution optimized for resource-constrained environments and rapid prototyping. k3d further simplifies deployment by running K3s clusters inside Docker containers, enabling easy resets, snapshots, and multi-node simulations without VM overhead.</p>
 </div>
 <div class="sect3">
-<h4 id="_step_1_install_k3d">4.1.1. Step 1: Install K3d</h4>
+<h4 id="_step_1_install_k3d">3.1.1. Step 1: Install K3d</h4>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -309,7 +432,7 @@ k3s version v1.31.5-k3s1 (default)</span></code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_step_2_create_the_k3s_cluster">4.1.2. Step 2: Create the K3s Cluster</h4>
+<h4 id="_step_2_create_the_k3s_cluster">3.1.2. Step 2: Create the K3s Cluster</h4>
 <div class="paragraph">
 <p>We&#8217;ll create a cluster with one server node and two agent nodes, exposing ports 443 and 80 for the load balancer.</p>
 </div>
@@ -343,7 +466,7 @@ k3s version v1.31.5-k3s1 (default)</span></code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_step_3_verify_cluster_status">4.1.3. Step 3: Verify Cluster Status</h4>
+<h4 id="_step_3_verify_cluster_status">3.1.3. Step 3: Verify Cluster Status</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="bash">kubectl get nodes</code></pre>
@@ -396,7 +519,7 @@ k3s version v1.31.5-k3s1 (default)</span></code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_installing_vault">4.2. Installing Vault</h3>
+<h3 id="_installing_vault">3.2. Installing Vault</h3>
 <div class="paragraph">
 <p>In this step, we will install HashiCorp Vault in the Kubernetes cluster using Helm. Vault will serve as our central secret management system. We will use the official Helm chart and run it in "dev" mode initially, just to validate the deployment and make quick iterations.</p>
 </div>
@@ -426,7 +549,7 @@ k3s version v1.31.5-k3s1 (default)</span></code></pre>
 </table>
 </div>
 <div class="sect3">
-<h4 id="_add_the_hashicorp_helm_repository">4.2.1. Add the HashiCorp Helm Repository</h4>
+<h4 id="_add_the_hashicorp_helm_repository">3.2.1. Add the HashiCorp Helm Repository</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="bash">helm repo add hashicorp https://helm.releases.hashicorp.com
@@ -435,7 +558,7 @@ helm repo update</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_deploying_vault_in_ha_mode">4.2.2. Deploying Vault in HA Mode</h4>
+<h4 id="_deploying_vault_in_ha_mode">3.2.2. Deploying Vault in HA Mode</h4>
 <div class="paragraph">
 <p>In this section, we will deploy Vault in High Availability (HA) mode using the integrated Raft storage backend. This setup provides a more realistic and production-like experience, suitable for multi-node clusters and secret replication scenarios.</p>
 </div>
@@ -462,7 +585,7 @@ helm repo update</code></pre>
 <p>Enables Raft storage with automatic <code>retry_join</code>.</p>
 </li>
 <li>
-<p>Disables TLS for simplicity (not recommended for production).</p>
+<p>In this seminar, TLS is disabled for Vault for simplicity and local accessibility.  <strong>In production environments, always enable TLS</strong> to protect secret communications.</p>
 </li>
 <li>
 <p>Exposes the Vault UI using a LoadBalancer service.</p>
@@ -471,7 +594,7 @@ helm repo update</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_wait_for_the_pods_to_be_ready">4.2.3. Wait for the Pods to Be Ready</h4>
+<h4 id="_wait_for_the_pods_to_be_ready">3.2.3. Wait for the Pods to Be Ready</h4>
 <div class="paragraph">
 <p>Check that all Vault pods are running:</p>
 </div>
@@ -493,7 +616,7 @@ vault-2   1/1     Running   0          2m</span></code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_initialize_the_vault_cluster">4.2.4. Initialize the Vault Cluster</h4>
+<h4 id="_initialize_the_vault_cluster">3.2.4. Initialize the Vault Cluster</h4>
 <div class="paragraph">
 <p>Vault must be initialized before it can be used. This step generates the master key, which is split into multiple unseal keys.</p>
 </div>
@@ -529,7 +652,7 @@ vault-2   1/1     Running   0          2m</span></code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_unseal_all_vault_nodes">4.2.5. Unseal All Vault Nodes</h4>
+<h4 id="_unseal_all_vault_nodes">3.2.5. Unseal All Vault Nodes</h4>
 <div class="paragraph">
 <p>Each Vault pod must be manually unsealed (unless auto-unseal is configured).
 You will use the same unseal key generated during the initialization step.</p>
@@ -568,7 +691,7 @@ kubectl <span class="nb">exec</span> <span class="nt">-it</span> vault-2 <span c
 </div>
 </div>
 <div class="sect3">
-<h4 id="_accessing_the_vault_ui_via_ingress">4.2.6. Accessing the Vault UI via Ingress</h4>
+<h4 id="_accessing_the_vault_ui_via_ingress">3.2.6. Accessing the Vault UI via Ingress</h4>
 <div class="paragraph">
 <p>To access the Vault Web UI using an Ingress controller (e.g. Traefik), we expose the Vault service externally by deploying a custom Ingress using our own Helm chart.</p>
 </div>
@@ -657,7 +780,7 @@ Login using the <strong>Initial Root Token</strong>.</p>
 <div class="paragraph">
 <p>After logging in, you should see the Vault UI dashboard</p>
 </div>
-<div class="imageblock text-center">
+<div id="a346bb78-504e-4cce-8637-fa3c70eb6601" class="imageblock text-center">
 <div class="content">
 <img src="images/vaultUI.png" alt="Vault UI" width="600">
 </div>
@@ -666,7 +789,7 @@ Login using the <strong>Initial Root Token</strong>.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_preparing_kubernetes_namespaces_and_workloads">4.3. Preparing Kubernetes Namespaces and Workloads</h3>
+<h3 id="_preparing_kubernetes_namespaces_and_workloads">3.3. Preparing Kubernetes Namespaces and Workloads</h3>
 <div class="paragraph">
 <p>Before configuring Vault, we need to prepare our Kubernetes cluster with the necessary namespaces.</p>
 </div>
@@ -697,7 +820,7 @@ Login using the <strong>Initial Root Token</strong>.</p>
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_create_namespaces_and_service_accounts">4.3.1. Create Namespaces and Service Accounts</h4>
+<h4 id="_create_namespaces_and_service_accounts">3.3.1. Create Namespaces and Service Accounts</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="bash"><span class="k">for </span>ns <span class="k">in </span>dev qa prod<span class="p">;</span> <span class="k">do
@@ -726,7 +849,7 @@ Login using the <strong>Initial Root Token</strong>.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_configuring_vault">4.4. Configuring Vault</h3>
+<h3 id="_configuring_vault">3.4. Configuring Vault</h3>
 <div class="paragraph">
 <p>With Vault running in High Availability (HA) mode, we now configure it to manage secrets for three isolated environments: <code>dev</code>, <code>qa</code>, and <code>prod</code>.</p>
 </div>
@@ -750,7 +873,7 @@ Login using the <strong>Initial Root Token</strong>.</p>
 <p>All configuration is automated using Terraform for consistency, reproducibility, and version control.</p>
 </div>
 <div class="sect3">
-<h4 id="_directory_structure">4.4.1. Directory Structure</h4>
+<h4 id="_directory_structure">3.4.1. Directory Structure</h4>
 <div class="paragraph">
 <p>All Terraform files related to Vault configuration are located under <code>terraform/vault/</code>:</p>
 </div>
@@ -766,7 +889,7 @@ Login using the <strong>Initial Root Token</strong>.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_mounting_kv_engines">4.4.2. Mounting KV Engines</h4>
+<h4 id="_mounting_kv_engines">3.4.2. Mounting KV Engines</h4>
 <div class="paragraph">
 <p>The <code>kv_mounts.tf</code> file mounts a KV v2 secrets engine for each environment using <code>vault_mount</code> resources.</p>
 </div>
@@ -791,7 +914,7 @@ Login using the <strong>Initial Root Token</strong>.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_defining_access_policies">4.4.3. Defining Access Policies</h4>
+<h4 id="_defining_access_policies">3.4.3. Defining Access Policies</h4>
 <div class="paragraph">
 <p>The file <code>policies.tf</code> defines a Vault policy for each environment.
 Each policy allows read-only access to the corresponding KV mount, ensuring strict separation of access.</p>
@@ -811,7 +934,7 @@ Each policy allows read-only access to the corresponding KV mount, ensuring stri
 </div>
 </div>
 <div class="sect3">
-<h4 id="_enabling_kubernetes_authentication">4.4.4. Enabling Kubernetes Authentication</h4>
+<h4 id="_enabling_kubernetes_authentication">3.4.4. Enabling Kubernetes Authentication</h4>
 <div class="paragraph">
 <p>The <code>kubernetes_auth.tf</code> file automates the full setup of the Kubernetes auth method in Vault:</p>
 </div>
@@ -842,9 +965,9 @@ Each policy allows read-only access to the corresponding KV mount, ensuring stri
 </div>
 </div>
 <div class="sect3">
-<h4 id="_providing_vault_and_kubernetes_credentials">4.4.5. Providing Vault and Kubernetes Credentials</h4>
+<h4 id="_providing_vault_and_kubernetes_credentials">3.4.5. Providing Vault and Kubernetes Credentials</h4>
 <div class="paragraph">
-<p>To securely configure Vault with Kubernetes authentication, we use a <code>.tfvars.json</code> file to provide all sensitive variables required by Terraform.</p>
+<p>To securely configure Vault with Kubernetes authentication, we supply Terraform with the necessary sensitive variables via a <code>.auto.tfvars.json</code> file. This format ensures that variables are automatically discovered during <code>terraform apply</code>, avoiding the need for manual input via CLI arguments or environment variables. It also promotes reproducibility and reduces the likelihood of human error in automation pipelines. Additionally, the <code>.json</code> format is ideal for handling complex or multiline values such as certificates and JWT tokens.</p>
 </div>
 <div class="paragraph">
 <p>Create the file <code>secrets.auto.tfvars.json</code> inside <code>terraform/vault/</code> with the following content:</p>
@@ -876,7 +999,23 @@ Each policy allows read-only access to the corresponding KV mount, ensuring stri
 </div>
 </div>
 <div class="sect3">
-<h4 id="_how_to_obtain_the_required_values">4.4.6. How to Obtain the Required Values</h4>
+<h4 id="_how_to_obtain_the_required_values">3.4.6. How to Obtain the Required Values</h4>
+<div class="paragraph">
+<p>Vault&#8217;s Kubernetes authentication method relies on validating ServiceAccount JWT tokens presented by pods in the cluster. To establish trust, Vault must be configured with:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The Kubernetes cluster’s public CA certificate (used to verify the API server&#8217;s TLS identity).</p>
+</li>
+<li>
+<p>A valid ServiceAccount JWT token (used to authenticate incoming pod identities).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>These credentials are typically retrieved from within a pod that has access to the Kubernetes API. By capturing them directly from a running pod, we ensure compatibility with the in-cluster configuration and secure communication with the Kubernetes control plane.</p>
+</div>
 <div class="paragraph">
 <p>These values can be extracted from any running pod in your cluster, such as <code>vault-0</code>.</p>
 </div>
@@ -919,7 +1058,7 @@ Add it to <code>.gitignore</code> to protect your credentials.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_applying_the_configuration">4.4.7. Applying the Configuration</h4>
+<h4 id="_applying_the_configuration">3.4.7. Applying the Configuration</h4>
 <div class="paragraph">
 <p>Once the variables file is ready, apply the configuration:</p>
 </div>
@@ -954,7 +1093,7 @@ terraform apply</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_verifying_kubernetes_authentication_to_vault">4.4.8. Verifying Kubernetes Authentication to Vault</h4>
+<h4 id="_verifying_kubernetes_authentication_to_vault">3.4.8. Verifying Kubernetes Authentication to Vault</h4>
 <div class="paragraph">
 <p>Now that Vault is configured, we can verify that a Kubernetes workload in the <code>dev</code> namespace can authenticate to Vault and access its secrets securely using the <code>vault-sa</code> service account.</p>
 </div>
@@ -1060,7 +1199,7 @@ EOF</span></code></pre>
 <div class="paragraph">
 <p>The response that you receive should look similar to this:</p>
 </div>
-<div class="imageblock text-center">
+<div id="fb5b5f80-c9a3-4338-925b-b2a39a1acded" class="imageblock text-center">
 <div class="content">
 <img src="images/vaultToken.png" alt="Vault token login response" width="600">
 </div>
@@ -1082,7 +1221,7 @@ EOF</span></code></pre>
 <div class="paragraph">
 <p>If configured correctly, you should see the secret:</p>
 </div>
-<div class="imageblock text-center">
+<div id="f03bd657-4b51-4a18-9ce5-32ec5f138633" class="imageblock text-center">
 <div class="content">
 <img src="images/vaultSecret.png" alt="Vault token login response" width="600">
 </div>
@@ -1118,13 +1257,13 @@ EOF</span></code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_installing_external_secrets_operator_eso">4.5. Installing External Secrets Operator (ESO)</h3>
+<h3 id="_installing_external_secrets_operator_eso">3.5. Installing External Secrets Operator (ESO)</h3>
 <div class="paragraph">
-<p>In this section, we install the External Secrets Operator (ESO), which synchronizes secrets from Vault into native Kubernetes <code>Secret</code> objects.
-This allows Kubernetes workloads to consume secrets managed in Vault without requiring application-level changes.</p>
+<p>The External Secrets Operator (ESO) is a Kubernetes-native controller that enables secure integration between external secret stores—such as Vault—and Kubernetes.
+It allows secrets managed in Vault to be automatically synchronized and projected as native Kubernetes <code>Secret</code> resources, supporting versioned updates, fine-grained access control, and declarative secret management.</p>
 </div>
 <div class="sect3">
-<h4 id="_recommended_resources">4.5.1. Recommended Resources</h4>
+<h4 id="_recommended_resources">3.5.1. Recommended Resources</h4>
 <div class="admonitionblock tip">
 <table>
 <tr>
@@ -1151,7 +1290,7 @@ This allows Kubernetes workloads to consume secrets managed in Vault without req
 </div>
 </div>
 <div class="sect3">
-<h4 id="_1_add_the_eso_helm_repository">4.5.2. 1. Add the ESO Helm repository</h4>
+<h4 id="_1_add_the_eso_helm_repository">3.5.2. 1. Add the ESO Helm repository</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="bash">helm repo add external-secrets https://charts.external-secrets.io
@@ -1160,7 +1299,7 @@ helm repo update</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_2_install_eso_in_the_external_secrets_namespace">4.5.3. 2. Install ESO in the external-secrets namespace</h4>
+<h4 id="_2_install_eso_in_the_external_secrets_namespace">3.5.3. 2. Install ESO in the external-secrets namespace</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="bash">helm upgrade <span class="nt">--install</span> external-secrets external-secrets/external-secrets <span class="se">\</span>
@@ -1186,7 +1325,7 @@ helm repo update</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_3_verify_eso_pods_are_running">4.5.4. 3. Verify ESO pods are running</h4>
+<h4 id="_3_verify_eso_pods_are_running">3.5.4. 3. Verify ESO pods are running</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="bash">kubectl get pods <span class="nt">-n</span> external-secrets</code></pre>
@@ -1219,9 +1358,9 @@ external-secrets-webhook-5fc8544c4c-dld6m          1/1     Running   0          
 </div>
 </div>
 <div class="sect3">
-<h4 id="_4_create_a_secretstore_in_each_environment_namespace">4.5.5. 4. Create a SecretStore in each environment namespace</h4>
+<h4 id="_4_create_a_secretstore_in_each_environment_namespace">3.5.5. 4. Create a SecretStore in each environment namespace</h4>
 <div class="paragraph">
-<p>Each namespace (<code>dev</code>, <code>qa</code>, <code>prod</code>) must define a <code>SecretStore</code> resource that configures Vault access using Kubernetes authentication.</p>
+<p>Each namespace (<code>dev</code>, <code>qa</code>, <code>prod</code>) requires its own <code>SecretStore</code> resource to define how ESO authenticates with Vault via Kubernetes.</p>
 </div>
 <div class="paragraph">
 <p>To preview the manifest using Helm templating:</p>
@@ -1283,12 +1422,12 @@ vault-store   48s   Valid    ReadWrite      True</span></code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_5_define_an_externalsecret_to_sync_data_from_vault">4.5.6. 5. Define an ExternalSecret to sync data from Vault</h4>
+<h4 id="_5_create_externalsecrets_to_sync_vault_data">3.5.6. 5. Create ExternalSecrets to Sync Vault Data</h4>
 <div class="paragraph">
-<p>An <code>ExternalSecret</code> defines how ESO should fetch data from Vault and write it into a Kubernetes <code>Secret</code>.</p>
+<p>The <code>ExternalSecret</code> resource defines how ESO fetches data from Vault and creates a corresponding Kubernetes <code>Secret</code>.</p>
 </div>
 <div class="paragraph">
-<p>To preview:</p>
+<p>Preview the manifest:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1352,7 +1491,7 @@ dev-credential   SecretStore   vault-store   1h                 SecretSynced   T
 </div>
 </div>
 <div class="sect3">
-<h4 id="_6_verify_that_the_secret_was_synced">4.5.7. 6. Verify that the secret was synced</h4>
+<h4 id="_6_verify_that_the_secret_was_synced">3.5.7. 6. Verify that the secret was synced</h4>
 <div class="paragraph">
 <p>Once synced, ESO creates a Kubernetes <code>Secret</code> with the desired values.</p>
 </div>
@@ -1362,9 +1501,9 @@ dev-credential   SecretStore   vault-store   1h                 SecretSynced   T
 </div>
 </div>
 <div class="paragraph">
-<p>You should see both <code>username</code> and <code>password</code> encoded in base64.</p>
+<p>The output should include both <code>username</code> and <code>password</code> keys encoded in base64.</p>
 </div>
-<div class="imageblock text-center">
+<div id="dfa052aa-bb08-497b-b2e2-5078d1090ca9" class="imageblock text-center">
 <div class="content">
 <img src="images/syncedSecret.png" alt="Synced secret" width="450">
 </div>
@@ -1373,13 +1512,16 @@ dev-credential   SecretStore   vault-store   1h                 SecretSynced   T
 </div>
 </div>
 <div class="sect2">
-<h3 id="_deploying_keycloak">4.6. Deploying Keycloak</h3>
+<h3 id="_deploying_keycloak">3.6. Deploying Keycloak</h3>
 <div class="paragraph">
-<p>In this section, we deploy a single instance of Keycloak into the <code>iam</code> namespace using the Bitnami Helm chart.
-This Keycloak instance will later host one Realm per environment (<code>dev</code>, <code>qa</code>, <code>prod</code>), acting as the centralized Identity Provider for the platform.</p>
+<p>Keycloak is an open-source Identity and Access Management (IAM) platform that also supports Customer Identity and Access Management (CIAM) use cases.
+It provides authentication, authorization, and identity federation capabilities suitable for both internal service identities and external user access.</p>
+</div>
+<div class="paragraph">
+<p>In this seminar, Keycloak serves as the central Identity Provider (IdP), hosting separate realms for each environment (<code>dev</code>, <code>qa</code>, <code>prod</code>) to isolate identity domains across namespaces.</p>
 </div>
 <div class="sect3">
-<h4 id="_recommended_resources_2">4.6.1. Recommended Resources</h4>
+<h4 id="_recommended_resources_2">3.6.1. Recommended Resources</h4>
 <div class="admonitionblock tip">
 <table>
 <tr>
@@ -1406,7 +1548,7 @@ This Keycloak instance will later host one Realm per environment (<code>dev</cod
 </div>
 </div>
 <div class="sect3">
-<h4 id="_1_add_the_bitnami_helm_repository">4.6.2. 1. Add the Bitnami Helm repository</h4>
+<h4 id="_1_add_the_bitnami_helm_repository">3.6.2. 1. Add the Bitnami Helm repository</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="bash">helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -1415,10 +1557,9 @@ helm repo update</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_2_deploy_keycloak_in_the_iam_namespace_with_persistence">4.6.3. 2. Deploy Keycloak in the <code>iam</code> namespace (with persistence)</h4>
+<h4 id="_2_deploy_keycloak_in_the_iam_namespace_with_persistence">3.6.3. 2. Deploy Keycloak in the <code>iam</code> namespace (with persistence)</h4>
 <div class="paragraph">
-<p>We deploy Keycloak with an embedded PostgreSQL database and persistent storage enabled.
-This prevents data loss across pod restarts and ensures the state of realms, users, and configurations is retained.</p>
+<p>Keycloak will be deployed using the Bitnami Helm chart, which includes PostgreSQL as a subchart for simplicity. This co-deployment enables data persistence across restarts.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1471,7 +1612,7 @@ This prevents data loss across pod restarts and ensures the state of realms, use
 </div>
 </div>
 <div class="sect3">
-<h4 id="_3_wait_for_the_keycloak_pods_to_be_ready">4.6.4. 3. Wait for the Keycloak pods to be ready</h4>
+<h4 id="_3_wait_for_the_keycloak_pods_to_be_ready">3.6.4. 3. Wait for the Keycloak pods to be ready</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="bash">kubectl get pods <span class="nt">-n</span> iam</code></pre>
@@ -1488,15 +1629,14 @@ keycloak-0   1/1     Running   0          1m</span></code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_4_access_the_keycloak_admin_ui_via_ingress">4.6.5. 4. Access the Keycloak Admin UI via Ingress</h4>
+<h4 id="_4_access_the_keycloak_admin_ui_via_ingress">3.6.5. 4. Access the Keycloak Admin UI via Ingress</h4>
 <div class="paragraph">
-<p>To access the Keycloak web UI, we expose it externally using an Ingress resource instead of port-forwarding.
-This is consistent with the approach used for Vault and better simulates a real-world deployment.</p>
+<p>Keycloak is exposed externally via a dedicated Kubernetes Ingress resource, using Traefik as the Ingress controller.</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Deploy the Ingress pointing to the <code>keycloak</code> service on port <code>8080</code> using the following Helm command:</p>
+<p>Deploy the Ingress pointing to the <code>keycloak</code> service on port <code>80</code> using the following Helm command:</p>
 </li>
 </ol>
 </div>
@@ -1551,7 +1691,7 @@ This is consistent with the approach used for Vault and better simulates a real-
 <div class="paragraph">
 <p>You now have Keycloak accessible through Ingress, consistent with how Vault is exposed.</p>
 </div>
-<div class="imageblock text-center">
+<div id="ecd883b1-4087-4873-99ee-e9f80d9a4aee" class="imageblock text-center">
 <div class="content">
 <img src="images/keycloakUI.png" alt="Keycloak UI" width="600">
 </div>
@@ -1562,27 +1702,31 @@ This is consistent with the approach used for Vault and better simulates a real-
 </div>
 </div>
 <div class="sect1">
-<h2 id="_deploying_a_go_application_with_vault_eso_and_keycloak_integration">5. Deploying a Go Application with Vault, ESO, and Keycloak Integration</h2>
+<h2 id="_deploying_sentinel1_api_with_vault_eso_and_keycloak_integration">4. Deploying Sentinel‑1 API with Vault, ESO, and Keycloak Integration</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>In this section, we will deploy a Go-based API that integrates with HashiCorp Vault, the External Secrets Operator (ESO), and Keycloak as the identity provider.</p>
+<p>In this section, we will deploy the <strong>Sentinel‑1</strong> Go-based API into a Kubernetes cluster, showcasing a complete integration of <strong>HashiCorp Vault</strong> for secrets management, <strong>External Secrets Operator (ESO)</strong> for Kubernetes-native secret synchronization, and <strong>Keycloak</strong> as the centralized Identity Provider (IdP).</p>
 </div>
 <div class="paragraph">
-<p>The API will authenticate against a Keycloak client configured under separate realms for each environment: <code>dev</code>, <code>qa</code>, and <code>prod</code>.
-Each client’s credentials—specifically, the <code>client_id</code> and <code>client_secret</code>—will be securely stored in the corresponding Vault KV engine (<code>secret-dev</code>, <code>secret-qa</code>, <code>secret-prod</code>).</p>
+<p>The Sentinel‑1 API source code is publicly available at: <a href="https://github.com/myworkshops/sentinel-1.git" target="_blank" rel="noopener">Sentinel-1 GitHub Repository</a>.</p>
 </div>
 <div class="paragraph">
-<p>To bridge Vault and Kubernetes, a <code>SecretStore</code> and <code>ExternalSecret</code> will be created in each namespace (<code>dev</code>, <code>qa</code>, <code>prod</code>).
-These resources enable ESO to fetch the credentials from Vault and project them into Kubernetes as native <code>Secret</code> objects.</p>
+<p>Each instance of the application will authenticate against a dedicated Keycloak client configured within separate realms corresponding to each environment (<code>dev</code>, <code>qa</code>, and <code>prod</code>).
+The associated credentials (<code>client_id</code> and <code>client_secret</code>) for each client will be securely stored in environment-specific Vault KV secrets engines (<code>secret-dev</code>, <code>secret-qa</code>, <code>secret-prod</code>).</p>
 </div>
 <div class="paragraph">
-<p>Once the secrets are synchronized, the API will be deployed within each namespace. It is designed to read the credentials dynamically from environment variables sourced via the synced secrets, and will be capable of responding to updates in real time—ensuring seamless rotation and propagation of secrets.</p>
+<p>To enable secure, dynamic injection of secrets into Kubernetes workloads, a <code>SecretStore</code> and an <code>ExternalSecret</code> will be provisioned per namespace.
+ESO will dynamically synchronize credentials from Vault, projecting them into Kubernetes as native <code>Secret</code> objects with automatic updates on credential changes.</p>
 </div>
 <div class="paragraph">
-<p>This setup demonstrates a full-stack integration of secret management and identity, aligning with modern zero-trust principles and cloud-native architecture best practices.</p>
+<p>Once credentials are synchronized, the Sentinel‑1 API will be deployed into each namespace.
+The application is designed to load its configuration dynamically from the mounted secrets and supports hot-reloading, ensuring seamless propagation of secret rotations without requiring manual restarts.</p>
+</div>
+<div class="paragraph">
+<p>This deployment exemplifies a full-stack, cloud-native architecture aligned with <strong>zero-trust security principles</strong>, demonstrating best practices in secure workload configuration and multi-environment identity federation.</p>
 </div>
 <div class="sect2">
-<h3 id="_create_realm_and_client_in_keycloak">5.1. Create Realm and Client in Keycloak</h3>
+<h3 id="_automating_keycloak_realm_client_and_user_provisioning">4.1. Automating Keycloak Realm, Client, and User Provisioning</h3>
 <div class="paragraph">
 <p>In this step, we automate the creation of Keycloak realms, clients, and users using Ansible.
 This configuration is executed separately for each environment (<code>dev</code>, <code>qa</code>, <code>prod</code>) to enforce proper segregation and security boundaries.</p>
@@ -1644,44 +1788,44 @@ brew <span class="nb">install </span>ansible</code></pre>
 </table>
 </div>
 <div class="sect3">
-<h4 id="_execute_per_environment">5.1.1. Execute per Environment</h4>
+<h4 id="_execute_per_environment">4.1.1. Execute per Environment</h4>
 <div class="paragraph">
 <p>To automate the creation of realms, clients, and users in Keycloak:</p>
 </div>
 <div class="paragraph">
-<p>Set the environment variable <code>THEENV</code> to the desired environment (<code>dev</code>, <code>qa</code>, or <code>prod</code>):</p>
+<p>Set the environment variable <code>ENV</code> to the desired environment (<code>dev</code>, <code>qa</code>, or <code>prod</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="bash"><span class="nb">export </span><span class="nv">THEENV</span><span class="o">=</span>prod</code></pre>
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">export </span><span class="nv">ENV</span><span class="o">=</span>prod</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Run the playbooks using the <code>THEENV</code> variable to target the corresponding environment:</p>
+<p>Run the playbooks using the <code>ENV</code> variable to target the corresponding environment:</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="rouge highlight"><code data-lang="bash">ansible-playbook realm.yml <span class="se">\</span>
   <span class="nt">-e</span> @values.yml <span class="se">\</span>
-  <span class="nt">-e</span> <span class="nv">env_work</span><span class="o">=</span><span class="nv">$THEENV</span> <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">env_work</span><span class="o">=</span><span class="nv">$ENV</span> <span class="se">\</span>
   <span class="nt">-e</span> <span class="nv">auth_username</span><span class="o">=</span>admin <span class="se">\</span>
   <span class="nt">-e</span> <span class="nv">auth_password</span><span class="o">=</span>admin123
 
 ansible-playbook client.yml <span class="se">\</span>
   <span class="nt">-e</span> @values.yml <span class="se">\</span>
-  <span class="nt">-e</span> <span class="nv">env_work</span><span class="o">=</span><span class="nv">$THEENV</span> <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">env_work</span><span class="o">=</span><span class="nv">$ENV</span> <span class="se">\</span>
   <span class="nt">-e</span> <span class="nv">auth_username</span><span class="o">=</span>admin <span class="se">\</span>
   <span class="nt">-e</span> <span class="nv">auth_password</span><span class="o">=</span>admin123
 
 ansible-playbook user.yml <span class="se">\</span>
   <span class="nt">-e</span> @values.yml <span class="se">\</span>
-  <span class="nt">-e</span> <span class="nv">env_work</span><span class="o">=</span><span class="nv">$THEENV</span> <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">env_work</span><span class="o">=</span><span class="nv">$ENV</span> <span class="se">\</span>
   <span class="nt">-e</span> <span class="nv">auth_username</span><span class="o">=</span>admin <span class="se">\</span>
   <span class="nt">-e</span> <span class="nv">auth_password</span><span class="o">=</span>admin123</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Repeat for each environment by setting <code>THEENV</code> accordingly.</p>
+<p>Repeat for each environment by setting <code>ENV</code> accordingly.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -1734,78 +1878,524 @@ Store them manually in Vault under the corresponding path for each environment:<
 </tr>
 </table>
 </div>
-<div class="imageblock text-center">
+<div id="cdd11456-6eef-47e7-9926-41090864b419" class="imageblock text-center">
 <div class="content">
 <img src="images/keycloak-client-output.png" alt="Client credentials log" width="400">
 </div>
 <div class="title">Figure 6. Ansible output showing client credentials</div>
 </div>
-<div class="imageblock text-center">
+<div id="e63efe5f-1612-4dd4-bd85-4a2eece594d1" class="imageblock text-center">
 <div class="content">
 <img src="images/vault-client-secret-sentinel.png" alt="Vault KV storage" width="840">
 </div>
 <div class="title">Figure 7. Credentials stored in Vault</div>
 </div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_keycloak_configuration_validation_optional">4.2. Keycloak Configuration Validation (Optional)</h3>
 <div class="paragraph">
-<p>This step prepares the identity infrastructure for each isolated environment, supporting secure, token-based authentication in the Go-based API.</p>
+<p>After running the playbooks, you can visually confirm that the realms, clients, and users were created correctly in the Keycloak Admin UI.</p>
+</div>
+<div class="sect3">
+<h4 id="_view_realms_list">4.2.1. View Realms List</h4>
+<div class="paragraph">
+<p>Log in to the Keycloak Admin Console (<code><a href="http://keycloak.test/admin" class="bare">http://keycloak.test/admin</a></code>) using the admin credentials.
+You should see the list of realms including: <code>dev</code>, <code>qa</code>, and <code>prod</code>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/keycloak-realms-list.png" alt="Keycloak Realms" width="800">
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_view_client_configuration">4.2.2. View Client Configuration</h4>
+<div class="paragraph">
+<p>Within any realm (e.g. <code>prod</code>), go to <code>Clients → sentinel-1</code>.
+This shows the client details including client ID, secret, redirect URIs, and access settings.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/keycloak-client-config.png" alt="Keycloak Client Configuration" width="800">
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_view_created_users">4.2.3. View Created Users</h4>
+<div class="paragraph">
+<p>Navigate to <code>Users</code> within the selected realm to confirm that the test users were successfully provisioned.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/keycloak-user-list.png" alt="Keycloak User List" width="800">
+</div>
+</div>
+<div class="paragraph">
+<p>These visual checks serve as a quick validation that the automation executed correctly and that your identity layer is correctly configured per environment.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_deploying_sentinel1_api_with_vault_eso_and_keycloak_integration_2">4.3. Deploying Sentinel‑1 API with Vault, ESO, and Keycloak Integration</h3>
+<div class="paragraph">
+<p>In this section, we will deploy the Sentinel‑1 API into the <code>dev</code>, <code>qa</code>, and <code>prod</code> namespaces.
+Secrets (<code>client_id</code> and <code>client_secret</code>) will be synchronized from Vault into Kubernetes using the External Secrets Operator (ESO).</p>
+</div>
+<div class="paragraph">
+<p>We will automate everything using a <code>for</code> loop to avoid repetition.</p>
+</div>
+<div class="sect3">
+<h4 id="_step_1_deploy_secretstore_and_externalsecret_for_each_environment">4.3.1. Step 1: Deploy SecretStore and ExternalSecret for each environment</h4>
+<div class="paragraph">
+<p>Use the following script to create the SecretStore and ExternalSecret dynamically for each namespace (<code>dev</code>, <code>qa</code>, <code>prod</code>).</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="k">for </span>ENV <span class="k">in </span>dev qa prod<span class="p">;</span> <span class="k">do
+  </span><span class="nb">echo</span> <span class="s2">"Deploying SecretStore and ExternalSecret in </span><span class="nv">$ENV</span><span class="s2">..."</span>
+
+  helm upgrade <span class="nt">--install</span> vault-<span class="nv">$ENV</span> <span class="se">\</span>
+    helm/external-secrets/secretStore/ <span class="se">\</span>
+    <span class="nt">--namespace</span> <span class="nv">$ENV</span> <span class="se">\</span>
+    <span class="nt">--set</span> vault.vaultPath<span class="o">=</span>secret-<span class="nv">$ENV</span> <span class="se">\</span>
+    <span class="nt">--set</span> vault.server<span class="o">=</span>http://vault.vault.svc:8200 <span class="se">\</span>
+    <span class="nt">--set</span> vault.auth.kubernetes.mountPath<span class="o">=</span>kubernetes <span class="se">\</span>
+    <span class="nt">--set</span> vault.auth.kubernetes.role<span class="o">=</span><span class="nv">$ENV</span> <span class="se">\</span>
+    <span class="nt">--set</span> vault.auth.kubernetes.serviceAccountName<span class="o">=</span>vault-sa
+
+  helm upgrade <span class="nt">--install</span> sentinel-1-secret-<span class="nv">$ENV</span> <span class="se">\</span>
+    helm/external-secrets/externalSecret/ <span class="se">\</span>
+    <span class="nt">--namespace</span> <span class="nv">$ENV</span> <span class="se">\</span>
+    <span class="nt">--set</span> <span class="nv">name</span><span class="o">=</span>keycloak-client-secret <span class="se">\</span>
+    <span class="nt">--set</span> secretStore.name<span class="o">=</span>vault-<span class="nv">$ENV</span><span class="nt">-store</span> <span class="se">\</span>
+    <span class="nt">--set</span> secretStore.kind<span class="o">=</span>SecretStore <span class="se">\</span>
+    <span class="nt">--set</span> target.creationPolicy<span class="o">=</span>Owner <span class="se">\</span>
+    <span class="nt">--set</span> data[0].secretKey<span class="o">=</span>client_id <span class="se">\</span>
+    <span class="nt">--set</span> data[0].remoteRef.key<span class="o">=</span>iam/idp_clients/sentinel-1 <span class="se">\</span>
+    <span class="nt">--set</span> data[0].remoteRef.property<span class="o">=</span>client_id <span class="se">\</span>
+    <span class="nt">--set</span> data[1].secretKey<span class="o">=</span>client_secret <span class="se">\</span>
+    <span class="nt">--set</span> data[1].remoteRef.key<span class="o">=</span>iam/idp_clients/sentinel-1 <span class="se">\</span>
+    <span class="nt">--set</span> data[1].remoteRef.property<span class="o">=</span>client_secret
+<span class="k">done</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This loop will:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Create a <code>SecretStore</code> configured for the correct Vault KV engine per environment.</p>
+</li>
+<li>
+<p>Create an <code>ExternalSecret</code> to sync the <code>client_id</code> and <code>client_secret</code> for the Sentinel‑1 API.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_step_2_deploy_the_sentinel1_api_across_environments">4.3.2. Step 2: Deploy the Sentinel‑1 API Across Environments</h4>
+<div class="paragraph">
+<p>Once the secrets are synchronized into each namespace, we proceed to deploy the <strong>Sentinel‑1</strong> API into the <code>dev</code>, <code>qa</code>, and <code>prod</code> environments.</p>
+</div>
+<div class="paragraph">
+<p>To automate the deployment process and avoid repetitive manual steps, use the following script:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="c"># Loop through each environment and deploy the Sentinel‑1 API and its corresponding Ingress</span>
+<span class="k">for </span>ENV <span class="k">in </span>dev qa prod<span class="p">;</span> <span class="k">do
+  </span><span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="se">\n</span><span class="s2"> Deploying Sentinel‑1 API in </span><span class="nv">$ENV</span><span class="s2">... </span><span class="se">\n</span><span class="s2">"</span>
+
+  <span class="c"># Deploy the API using Helm</span>
+  helm upgrade <span class="nt">--install</span> sentinel-1 helm/sentinel-1/ <span class="se">\</span>
+    <span class="nt">--namespace</span> <span class="nv">$ENV</span> <span class="se">\</span>
+    <span class="nt">--set</span> api.name<span class="o">=</span>sentinel-1-<span class="nv">$ENV</span> <span class="se">\</span>
+    <span class="nt">--set</span> api.image.name<span class="o">=</span>wmoinar/sentinel-1-<span class="nv">$ENV</span> <span class="se">\</span>
+    <span class="nt">--set</span> api.image.tag<span class="o">=</span>1.0.0 <span class="se">\</span>
+    <span class="nt">--set</span> api.redirect_url<span class="o">=</span>http://sentinel-1-<span class="nv">$ENV</span>.test/callback <span class="se">\</span>
+    <span class="nt">--set</span> keycloak.issuer_url<span class="o">=</span>http://keycloak.test/realms/<span class="nv">$ENV</span> <span class="se">\</span>
+    <span class="nt">--set</span> keycloak.internal_url<span class="o">=</span>http://keycloak.iam.svc.cluster.local/realms/<span class="nv">$ENV</span>
+
+  <span class="c"># Deploy the Ingress for external access</span>
+  helm upgrade <span class="nt">--install</span> sentinel-1-<span class="nv">$ENV</span><span class="nt">-ingress</span> helm/traefik/ingress/ <span class="se">\</span>
+    <span class="nt">--namespace</span> <span class="nv">$ENV</span> <span class="se">\</span>
+    <span class="nt">--set</span> annotations.ingressClass<span class="o">=</span>traefik <span class="se">\</span>
+    <span class="nt">--set</span> spec.ingressClassName<span class="o">=</span>traefik <span class="se">\</span>
+    <span class="nt">--set</span> spec.rules.host<span class="o">=</span>sentinel-1-<span class="nv">$ENV</span>.test <span class="se">\</span>
+    <span class="nt">--set</span> spec.rules.paths[0].path<span class="o">=</span><span class="s2">"/"</span> <span class="se">\</span>
+    <span class="nt">--set</span> spec.rules.paths[0].pathType<span class="o">=</span>Prefix <span class="se">\</span>
+    <span class="nt">--set</span> spec.rules.paths[0].backend.service.name<span class="o">=</span>sentinel-1-<span class="nv">$ENV</span> <span class="se">\</span>
+    <span class="nt">--set</span> spec.rules.paths[0].backend.service.port<span class="o">=</span>80 <span class="se">\</span>
+    <span class="nt">--set</span> tls.enabled<span class="o">=</span><span class="nb">false
+</span><span class="k">done</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This loop automates:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Deployment of the Sentinel‑1 API containers for each environment.</p>
+</li>
+<li>
+<p>Creation of the corresponding Ingress resources to expose the APIs externally.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_step_3_configure_local_access">4.3.3. Step 3: Configure Local Access</h4>
+<div class="paragraph">
+<p>To access the APIs using their respective domain names, add the following entries to your <code>/etc/hosts</code> file:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">echo</span> <span class="s2">"127.0.0.1 sentinel-1-dev.test"</span> | <span class="nb">sudo tee</span> <span class="nt">-a</span> /etc/hosts
+<span class="nb">echo</span> <span class="s2">"127.0.0.1 sentinel-1-qa.test"</span> | <span class="nb">sudo tee</span> <span class="nt">-a</span> /etc/hosts
+<span class="nb">echo</span> <span class="s2">"127.0.0.1 sentinel-1-prod.test"</span> | <span class="nb">sudo tee</span> <span class="nt">-a</span> /etc/hosts</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This ensures that your local machine resolves the custom hostnames to your cluster’s Ingress controller.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_verifying_the_end_to_end_platform_setup">4.4. Verifying the End-to-End Platform Setup</h3>
+<div class="paragraph">
+<p>This section provides a structured validation process to ensure that all deployed components—Vault, External Secrets Operator (ESO), Keycloak, and the Sentinel‑1 application—are fully operational and integrated across all target environments (<code>dev</code>, <code>qa</code>, and <code>prod</code>).</p>
+</div>
+<div class="sect3">
+<h4 id="_infrastructure_and_synchronization_validation">4.4.1. Infrastructure and Synchronization Validation</h4>
+<div class="paragraph">
+<p>First, validate the state of Kubernetes workloads and resources.</p>
+</div>
+<div class="paragraph">
+<p>Check that the Sentinel‑1 API pods are running:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">oc get pods <span class="nt">-A</span> | <span class="nb">grep </span>sentinel-1</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">dev    sentinel-1-dev-7d8df797c8-66htp     1/1   Running   0   11h
+prod   sentinel-1-prod-74d897864-hfzqz     1/1   Running   0   11h
+qa     sentinel-1-qa-59d6d55795-z8pps      1/1   Running   0   11h</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Validate that the <code>SecretStore</code> resources have been successfully created and are in a <code>Ready</code> state:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">oc get SecretStore <span class="nt">-A</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">NAMESPACE   NAME               AGE   STATUS   CAPABILITIES   READY
+dev         vault-dev-store    44h   Valid    ReadWrite      True
+dev         vault-store        43h   Valid    ReadWrite      True
+prod        vault-prod-store   43h   Valid    ReadWrite      True
+qa          vault-qa-store     43h   Valid    ReadWrite      True</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Verify that all <code>ExternalSecret</code> resources are actively synchronized with Vault:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">oc get ExternalSecret <span class="nt">-A</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">NAMESPACE   NAME                     STORETYPE     STORE              REFRESH INTERVAL   STATUS         READY
+dev         dev-credential           SecretStore   vault-store        1h                 SecretSynced   True
+dev         sentinel-1-secret-dev    SecretStore   vault-dev-store    1h                 SecretSynced   True
+prod        sentinel-1-secret-prod   SecretStore   vault-prod-store   2s                 SecretSynced   True
+qa          sentinel-1-secret-qa     SecretStore   vault-qa-store     1h                 SecretSynced   True</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Finally, confirm that Kubernetes secrets have been materialized correctly:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">oc get secret <span class="nt">-A</span> | <span class="nb">grep </span>synced-sentinel-1-secret</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Expected output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="console"><span class="go">dev    synced-sentinel-1-secret-dev     Opaque   2   12h
+prod   synced-sentinel-1-secret-prod    Opaque   2   12h
+qa     synced-sentinel-1-secret-qa      Opaque   2   12h</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_application_functionality_validation">4.4.2. Application Functionality Validation</h4>
+<div class="paragraph">
+<p>Next, validate end-to-end application login and token acquisition.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Open a browser and navigate to the deployed application for the <code>qa</code> environment: <code><a href="http://sentinel-1-qa.test" class="bare">http://sentinel-1-qa.test</a></code></p>
+<div class="paragraph">
+<p>You should see the <strong>Login with Keycloak</strong> button.</p>
+</div>
+</li>
+</ol>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/login.png" alt="Sentinel-1 Login Button" width="640">
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Click the login button to initiate the OIDC authentication flow via Keycloak.
+You should be redirected to the Keycloak login page associated with the <code>qa</code> realm.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/keycloak-login.png" alt="Keycloak Login Screen" width="640">
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Authenticate with valid user credentials (<code>testuser1</code> or equivalent).</p>
+</li>
+<li>
+<p>Finally, the Sentinel‑1 API will display the retrieved ID token, including decoded claims from the Access Token:</p>
+</li>
+</ol>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/token.png" alt="Sentinel‑1 Token Output" width="640">
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_summary">4.4.3. Summary</h4>
+<div class="paragraph">
+<p>Successful validation across these steps confirms that:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Vault, Kubernetes, and ESO are correctly integrated and secrets are dynamically provisioned.</p>
+</li>
+<li>
+<p>Keycloak is acting as the identity provider with environment-specific realms.</p>
+</li>
+<li>
+<p>The Sentinel‑1 API is capable of real-time secret consumption and OIDC-based user authentication.</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If any validation step fails, investigate the corresponding subsystem (Vault policy, ESO configuration, Keycloak client mapping, or Kubernetes resource deployment) before proceeding.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_best_practices_and_security_considerations">6. Best Practices and Security Considerations</h2>
+<h2 id="_best_practices_and_security_considerations">5. Best Practices and Security Considerations</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>A secure secret management platform in Kubernetes requires disciplined authentication, access control, infrastructure hardening, and operational monitoring.
+The following best practices should be applied consistently across environments.</p>
+</div>
+<div class="sect2">
+<h3 id="_authentication_and_token_management">5.1. Authentication and Token Management</h3>
 <div class="ulist">
 <ul>
 <li>
-<p>Never hardcode Vault tokens or root credentials in source files.</p>
+<p>Never hardcode Vault root tokens or static secrets in source files or repositories.</p>
 </li>
 <li>
-<p>Use short-lived tokens and role-based access control (RBAC) in Vault.</p>
+<p>Use short-lived, renewable tokens and Kubernetes ServiceAccount authentication for workloads.</p>
 </li>
 <li>
-<p>Ensure TLS is configured in production scenarios.</p>
+<p>Audit active tokens periodically and revoke unused credentials.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_access_control_and_segmentation">5.2. Access Control and Segmentation</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Implement fine-grained Vault policies based on namespaces (<code>dev</code>, <code>qa</code>, <code>prod</code>) and application roles.</p>
 </li>
 <li>
-<p>Use namespaces to segment teams or environments cleanly.</p>
+<p>Bind Vault roles tightly to Kubernetes ServiceAccounts to enforce least privilege.</p>
 </li>
 <li>
-<p>Set resource limits and configure alerts for secret rotation failures.</p>
+<p>Avoid granting <code>root</code> or overly broad policies to services or automations.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_infrastructure_security">5.3. Infrastructure Security</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Always enable TLS for Vault API and internal Raft communication.</p>
+</li>
+<li>
+<p>Integrate Vault auto-unseal with a cloud KMS provider in production.</p>
+</li>
+<li>
+<p>Apply Kubernetes NetworkPolicies to limit Vault and ESO communication scope.</p>
+</li>
+<li>
+<p>Isolate Vault and ESO components into dedicated namespaces.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_secret_synchronization_and_monitoring">5.4. Secret Synchronization and Monitoring</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Configure ESO for automatic refresh and synchronization of Kubernetes Secrets from Vault.</p>
+</li>
+<li>
+<p>Set resource limits for Vault and ESO pods to prevent resource exhaustion.</p>
+</li>
+<li>
+<p>Monitor Vault health (<code>/v1/sys/health</code>), Raft quorum status, and ESO synchronization success.</p>
+</li>
+<li>
+<p>Enable Vault audit logging and alert on critical failures.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_final_recommendations">5.5. Final Recommendations</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Treat secrets as critical infrastructure assets.</p>
+</li>
+<li>
+<p>Automate secret lifecycle management, including rotation and revocation.</p>
+</li>
+<li>
+<p>Plan for resilience: test Vault unsealing, backup recovery, and ESO controller failovers.</p>
+</li>
+<li>
+<p>Periodically review and update security policies to adapt to evolving threats.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Adhering to these practices ensures a robust, zero-trust posture while enabling secure, scalable operations in Kubernetes-native environments.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_references">6. References</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following official documentation sources were referenced throughout this seminar:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://developer.hashicorp.com/vault" target="_blank" rel="noopener">HashiCorp Vault Documentation</a></p>
+</li>
+<li>
+<p><a href="https://external-secrets.io" target="_blank" rel="noopener">External Secrets Operator (ESO)</a></p>
+</li>
+<li>
+<p><a href="https://k3d.io" target="_blank" rel="noopener">K3d Documentation</a></p>
+</li>
+<li>
+<p><a href="https://helm.sh" target="_blank" rel="noopener">Helm Documentation</a></p>
+</li>
+<li>
+<p><a href="https://www.keycloak.org" target="_blank" rel="noopener">Keycloak Documentation</a></p>
+</li>
+<li>
+<p><a href="https://www.terraform.io/docs" target="_blank" rel="noopener">Terraform Documentation</a></p>
+</li>
+<li>
+<p><a href="https://docs.ansible.com" target="_blank" rel="noopener">Ansible Documentation</a></p>
+</li>
+<li>
+<p><a href="https://kubernetes.io" target="_blank" rel="noopener">Kubernetes Documentation</a></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Additional resources:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://developer.hashicorp.com/vault/tutorials/kubernetes" target="_blank" rel="noopener">Kubernetes + Vault Tutorials</a></p>
+</li>
+<li>
+<p><a href="https://artifacthub.io/packages/helm/bitnami/keycloak" target="_blank" rel="noopener">Bitnami Keycloak Helm Chart</a></p>
 </li>
 </ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_references">7. References</h2>
-<div class="sectionbody">
-<div class="ulist">
-<ul>
-<li>
-<p><a href="https://developer.hashicorp.com/vault/docs" class="bare">https://developer.hashicorp.com/vault/docs</a></p>
-</li>
-<li>
-<p><a href="https://external-secrets.io" class="bare">https://external-secrets.io</a></p>
-</li>
-<li>
-<p><a href="https://k3d.io" class="bare">https://k3d.io</a></p>
-</li>
-<li>
-<p><a href="https://helm.sh" class="bare">https://helm.sh</a></p>
-</li>
-<li>
-<p><a href="https://www.keycloak.org" class="bare">https://www.keycloak.org</a></p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_list_of_figures">8. List of figures</h2>
+<h2 id="_list_of_figures">7. List of figures</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>list-of::image[]</p>
+<p><a href="#a346bb78-504e-4cce-8637-fa3c70eb6601">Figure 1.</a> Vault dashboard<br>
+<a href="#fb5b5f80-c9a3-4338-925b-b2a39a1acded">Figure 2.</a> Vault token issued via Kubernetes authentication using vault-sa in dev namespace<br>
+<a href="#f03bd657-4b51-4a18-9ce5-32ec5f138633">Figure 3.</a> Secret retrieved from Vault using the token<br>
+<a href="#dfa052aa-bb08-497b-b2e2-5078d1090ca9">Figure 4.</a> Vault secret synced to Kubernetes<br>
+<a href="#ecd883b1-4087-4873-99ee-e9f80d9a4aee">Figure 5.</a> User interface of Keycloak<br>
+<a href="#cdd11456-6eef-47e7-9926-41090864b419">Figure 6.</a> Ansible output showing client credentials<br>
+<a href="#e63efe5f-1612-4dd4-bd85-4a2eece594d1">Figure 7.</a> Credentials stored in Vault<br></p>
 </div>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
 </div>
@@ -1813,7 +2403,7 @@ Store them manually in Vault under the corresponding path for each environment:<
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2025-04-23 18:46:40 +0200
+Last updated 2025-04-27 12:33:57 +0200
 </div>
 </div>
 </body>

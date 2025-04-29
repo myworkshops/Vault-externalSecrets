@@ -1,18 +1,74 @@
-
 == Environment and Tooling
 
-=== Tools Used
+This seminar is designed to be executed in a local development environment that closely simulates production-grade Kubernetes deployments.  
+Participants are expected to provision and configure the necessary tools to automate the entire secrets management lifecycle.
 
-- Docker (with Docker Desktop on macOS)
-- k3d (K3s in Docker)
-- Helm
-- Terraform
-- Ansible
-- External Secrets Operator
-- HashiCorp Vault
+=== Tools and Technologies
 
-=== System Requirements
+The following tools and platforms are required:
 
-- macOS or Ubuntu with at least 8 GB RAM
-- Docker installed and running
-- Internet access to pull container images and charts
+- *Docker*: Container runtime engine (using Docker Desktop for macOS or Ubuntu).
+- *k3d*: Lightweight wrapper to run K3s (Kubernetes) clusters inside Docker.
+- *Helm*: Kubernetes package manager for deploying Vault, Keycloak, and ESO charts.
+- *Terraform*: Infrastructure as Code (IaC) tool for automating Vault and Kubernetes resources.
+- *Ansible*: Configuration management and orchestration for Keycloak and Vault setups.
+- *External Secrets Operator (ESO)*: Kubernetes controller to synchronize secrets from Vault.
+- *HashiCorp Vault*: Centralized secrets management and encryption service.
+- *Keycloak*: Identity and Access Management (IAM) solution for authentication and authorization.
+
+=== System Prerequisites
+
+Participants should have the following baseline environment:
+
+- A computer running macOS or Ubuntu with at least **8 GB of RAM**.
+- Docker installed and running.
+- Internet access to pull container images, Helm charts, and package dependencies.
+
+[NOTE]
+====
+It is highly recommended to use the latest stable versions of Docker, Helm, Terraform, and Ansible to ensure compatibility with the provided instructions.
+====
+
+=== Tool Version Matrix
+
+The following table summarizes the versions used during the development and validation of this seminar:
+
+|===
+| Tool | Version Tested | Official Documentation
+
+| Docker
+| 28.1.1
+| https://www.docker.com/
+
+| Helm
+| v3.17.3
+| https://helm.sh/
+
+| Terraform
+| v1.11.3
+| https://developer.hashicorp.com/terraform
+
+| Ansible
+| core 2.18.5
+| https://docs.ansible.com/
+
+| k3d
+| v5.8.3
+| https://k3d.io/
+
+| Kubernetes
+| v1.31.5+k3s1
+| https://kubernetes.io/
+
+| External Secrets Operator (ESO)
+| v0.16.1
+| https://external-secrets.io/
+
+| HashiCorp Vault
+| 1.19.0 
+| https://developer.hashicorp.com/vault
+
+| Keycloak
+| 26.2.0
+| https://www.keycloak.org/
+|===

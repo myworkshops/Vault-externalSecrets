@@ -1,11 +1,21 @@
 == Introduction
 
-HashiCorp Vault is a highly flexible tool for managing secrets, encryption keys, and access policies. With the introduction of _Vault Namespaces_, organizations can isolate teams, environments, or tenants with fully independent Vault environments, all within the same cluster.
+In modern cloud-native architectures, secure and scalable secret management is a critical requirement. Organizations increasingly operate multi-tenant Kubernetes clusters and microservices that demand isolated access to sensitive credentials, encryption keys, and configuration data. Solutions must align with zero-trust principles while ensuring operational simplicity and compliance.
 
-On the other hand, the _External Secrets Operator (ESO)_ allows Kubernetes-native integration with external secret stores, such as Vault, AWS Secrets Manager, and others, enabling secure and declarative secret management.
+HashiCorp Vault is a highly flexible and extensible tool for managing secrets, encryption keys, and access policies. With the introduction of _Vault Namespaces_ (Enterprise feature), Vault enables full logical isolation for different teams, environments, or tenants within a single deployment.
 
-This seminar explores how to:
+Complementing this, the _External Secrets Operator (ESO)_ provides Kubernetes-native integration with external secret stores like Vault, AWS Secrets Manager, and others. ESO enables secure, declarative secret synchronization into Kubernetes clusters, supporting dynamic secret rotation and fine-grained access control.
 
-- Provision a K3s cluster.
-- Deploy Vault with multiple namespaces.
-- Use External Secrets Operator to sync and inject secrets into different Kubernetes namespaces.
+Keycloak serves as the centralized Identity Provider (IdP) within the seminar's architecture, managing authentication flows and user identities.
+
+This seminar focuses on demonstrating a complete, automated workflow to:
+
+- Provision a lightweight K3s Kubernetes cluster suitable for labs and development.
+- Deploy Vault configured for high availability and simulated namespaces using KV backends.
+- Integrate Vault with Kubernetes authentication per namespace.
+- Install and configure the External Secrets Operator.
+- Deploy a practical Go-based API (Sentinel‑1) that consumes secrets and authenticates users via Keycloak.
+
+Keycloak will be configured as the centralized Identity Provider (IdP) to manage authentication flows, realms, clients, and user identities across all environments (`dev`, `qa`, and `prod`).
+
+Throughout the seminar, we emphasize reproducibility, security best practices, and real-world applicability, offering students a hands-on, industry-aligned experience.

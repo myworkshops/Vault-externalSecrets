@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-{{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-{{ .Release.Namespace }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-{{ .Release.Namespace }}
+    spec:
+      containers:
+      - name: {{ .Values.api.name }}
+        image: {{ .Values.api.image.name }}:{{ .Values.api.image.tag | default "latest" }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: KEYCLOAK_ISSUER_URL
+          value: {{ .Values.keycloak.issuer_url }}
+        - name: KEYCLOAK_INTERNAL_URL
+          value: {{ .Values.keycloak.internal_url }}  
+        - name: REDIRECT_URL
+          value: {{ .Values.api.redirect_url }}
+        - name: SECRET_WATCH_PATH
+          value: "/etc/secrets/keycloak"
+        volumeMounts:
+        - name: synced-{{ .Release.Name }}-secret-{{ .Release.Namespace }}
+          mountPath: /etc/secrets/keycloak
+          readOnly: true
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 20
+      volumes:
+      - name: synced-{{ .Release.Name }}-secret-{{ .Release.Namespace }}
+        secret:
+          secretName: synced-{{ .Release.Name }}-secret-{{ .Release.Namespace }}

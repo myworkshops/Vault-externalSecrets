@@ -1,0 +1,10 @@
+api:
+  name: sentinel-1
+  image:
+    name: wmoinar/sentinel-1-dev
+    tag: 1.0.0
+  redirect_url: http://sentinel-1-dev.test/callback
+
+keycloak:
+  issuer_url: http://keycloak.test/realms/dev
+  internal_url: http://keycloak.iam.svc.cluster.local/realms/dev

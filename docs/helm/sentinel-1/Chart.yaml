@@ -1,0 +1,4 @@
+apiVersion: v2
+name: Sentinel-1
+description: An application to demonstrate the use of Vault, Keycloak and ESO.
+version: 1.0.0

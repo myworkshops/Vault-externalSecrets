@@ -1,6 +1,3 @@
-name: sentinel-1-api
-namespace: dev
-
 annotations:
   ingressClass: traefik
 

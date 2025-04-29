@@ -1,8 +1,39 @@
-
 == Best Practices and Security Considerations
 
-- Never hardcode Vault tokens or root credentials in source files.
-- Use short-lived tokens and role-based access control (RBAC) in Vault.
-- Ensure TLS is configured in production scenarios.
-- Use namespaces to segment teams or environments cleanly.
-- Set resource limits and configure alerts for secret rotation failures.
+A secure secret management platform in Kubernetes requires disciplined authentication, access control, infrastructure hardening, and operational monitoring.  
+The following best practices should be applied consistently across environments.
+
+=== Authentication and Token Management
+
+- Never hardcode Vault root tokens or static secrets in source files or repositories.
+- Use short-lived, renewable tokens and Kubernetes ServiceAccount authentication for workloads.
+- Audit active tokens periodically and revoke unused credentials.
+
+=== Access Control and Segmentation
+
+- Implement fine-grained Vault policies based on namespaces (`dev`, `qa`, `prod`) and application roles.
+- Bind Vault roles tightly to Kubernetes ServiceAccounts to enforce least privilege.
+- Avoid granting `root` or overly broad policies to services or automations.
+
+=== Infrastructure Security
+
+- Always enable TLS for Vault API and internal Raft communication.
+- Integrate Vault auto-unseal with a cloud KMS provider in production.
+- Apply Kubernetes NetworkPolicies to limit Vault and ESO communication scope.
+- Isolate Vault and ESO components into dedicated namespaces.
+
+=== Secret Synchronization and Monitoring
+
+- Configure ESO for automatic refresh and synchronization of Kubernetes Secrets from Vault.
+- Set resource limits for Vault and ESO pods to prevent resource exhaustion.
+- Monitor Vault health (`/v1/sys/health`), Raft quorum status, and ESO synchronization success.
+- Enable Vault audit logging and alert on critical failures.
+
+=== Final Recommendations
+
+- Treat secrets as critical infrastructure assets.
+- Automate secret lifecycle management, including rotation and revocation.
+- Plan for resilience: test Vault unsealing, backup recovery, and ESO controller failovers.
+- Periodically review and update security policies to adapt to evolving threats.
+
+Adhering to these practices ensures a robust, zero-trust posture while enabling secure, scalable operations in Kubernetes-native environments.
