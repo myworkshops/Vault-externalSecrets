@@ -92,7 +92,7 @@
 <h1>Automating Secret Management with Vault Namespaces and External Secrets</h1>
 <div class="details">
 <span id="author" class="author">Wilmer Moina &amp; Diego Fernández</span><br>
-<span id="revdate">2025-04-27</span>
+<span id="revdate">2025-04-30</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -780,7 +780,7 @@ Login using the <strong>Initial Root Token</strong>.</p>
 <div class="paragraph">
 <p>After logging in, you should see the Vault UI dashboard</p>
 </div>
-<div id="a346bb78-504e-4cce-8637-fa3c70eb6601" class="imageblock text-center">
+<div id="76ca3f66-03c0-4fe1-9287-28beae939fa3" class="imageblock text-center">
 <div class="content">
 <img src="images/vaultUI.png" alt="Vault UI" width="600">
 </div>
@@ -1199,7 +1199,7 @@ EOF</span></code></pre>
 <div class="paragraph">
 <p>The response that you receive should look similar to this:</p>
 </div>
-<div id="fb5b5f80-c9a3-4338-925b-b2a39a1acded" class="imageblock text-center">
+<div id="856d1832-8e5e-4b64-b42e-312d33071cdc" class="imageblock text-center">
 <div class="content">
 <img src="images/vaultToken.png" alt="Vault token login response" width="600">
 </div>
@@ -1221,7 +1221,7 @@ EOF</span></code></pre>
 <div class="paragraph">
 <p>If configured correctly, you should see the secret:</p>
 </div>
-<div id="f03bd657-4b51-4a18-9ce5-32ec5f138633" class="imageblock text-center">
+<div id="e33bc278-5a39-48ec-bed7-43d6e37dfa0a" class="imageblock text-center">
 <div class="content">
 <img src="images/vaultSecret.png" alt="Vault token login response" width="600">
 </div>
@@ -1503,7 +1503,7 @@ dev-credential   SecretStore   vault-store   1h                 SecretSynced   T
 <div class="paragraph">
 <p>The output should include both <code>username</code> and <code>password</code> keys encoded in base64.</p>
 </div>
-<div id="dfa052aa-bb08-497b-b2e2-5078d1090ca9" class="imageblock text-center">
+<div id="52e33766-63c7-4288-9f71-229e7674a207" class="imageblock text-center">
 <div class="content">
 <img src="images/syncedSecret.png" alt="Synced secret" width="450">
 </div>
@@ -1691,7 +1691,7 @@ keycloak-0   1/1     Running   0          1m</span></code></pre>
 <div class="paragraph">
 <p>You now have Keycloak accessible through Ingress, consistent with how Vault is exposed.</p>
 </div>
-<div id="ecd883b1-4087-4873-99ee-e9f80d9a4aee" class="imageblock text-center">
+<div id="f1b88117-9b5e-4ebf-95fd-0c311e0e1ecf" class="imageblock text-center">
 <div class="content">
 <img src="images/keycloakUI.png" alt="Keycloak UI" width="600">
 </div>
@@ -1878,13 +1878,13 @@ Store them manually in Vault under the corresponding path for each environment:<
 </tr>
 </table>
 </div>
-<div id="cdd11456-6eef-47e7-9926-41090864b419" class="imageblock text-center">
+<div id="93eeff8a-e6db-41d7-b434-288f9991ec1f" class="imageblock text-center">
 <div class="content">
 <img src="images/keycloak-client-output.png" alt="Client credentials log" width="400">
 </div>
 <div class="title">Figure 6. Ansible output showing client credentials</div>
 </div>
-<div id="e63efe5f-1612-4dd4-bd85-4a2eece594d1" class="imageblock text-center">
+<div id="4bf05a87-469f-4688-9d29-502f560f8eb5" class="imageblock text-center">
 <div class="content">
 <img src="images/vault-client-secret-sentinel.png" alt="Vault KV storage" width="840">
 </div>
@@ -2389,13 +2389,13 @@ The following best practices should be applied consistently across environments.
 <h2 id="_list_of_figures">7. List of figures</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="#a346bb78-504e-4cce-8637-fa3c70eb6601">Figure 1.</a> Vault dashboard<br>
-<a href="#fb5b5f80-c9a3-4338-925b-b2a39a1acded">Figure 2.</a> Vault token issued via Kubernetes authentication using vault-sa in dev namespace<br>
-<a href="#f03bd657-4b51-4a18-9ce5-32ec5f138633">Figure 3.</a> Secret retrieved from Vault using the token<br>
-<a href="#dfa052aa-bb08-497b-b2e2-5078d1090ca9">Figure 4.</a> Vault secret synced to Kubernetes<br>
-<a href="#ecd883b1-4087-4873-99ee-e9f80d9a4aee">Figure 5.</a> User interface of Keycloak<br>
-<a href="#cdd11456-6eef-47e7-9926-41090864b419">Figure 6.</a> Ansible output showing client credentials<br>
-<a href="#e63efe5f-1612-4dd4-bd85-4a2eece594d1">Figure 7.</a> Credentials stored in Vault<br></p>
+<p><a href="#76ca3f66-03c0-4fe1-9287-28beae939fa3">Figure 1.</a> Vault dashboard<br>
+<a href="#856d1832-8e5e-4b64-b42e-312d33071cdc">Figure 2.</a> Vault token issued via Kubernetes authentication using vault-sa in dev namespace<br>
+<a href="#e33bc278-5a39-48ec-bed7-43d6e37dfa0a">Figure 3.</a> Secret retrieved from Vault using the token<br>
+<a href="#52e33766-63c7-4288-9f71-229e7674a207">Figure 4.</a> Vault secret synced to Kubernetes<br>
+<a href="#f1b88117-9b5e-4ebf-95fd-0c311e0e1ecf">Figure 5.</a> User interface of Keycloak<br>
+<a href="#93eeff8a-e6db-41d7-b434-288f9991ec1f">Figure 6.</a> Ansible output showing client credentials<br>
+<a href="#4bf05a87-469f-4688-9d29-502f560f8eb5">Figure 7.</a> Credentials stored in Vault<br></p>
 </div>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
 </div>
@@ -2403,7 +2403,7 @@ The following best practices should be applied consistently across environments.
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2025-04-27 12:33:57 +0200
+Last updated 2025-04-30 00:09:18 +0200
 </div>
 </div>
 </body>
