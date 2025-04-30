@@ -448,6 +448,12 @@ Now that Vault is configured, we can verify that a Kubernetes workload in the `d
 
 First, store a secret in the `secret-dev` path using a Vault token that has the appropriate policy (e.g., the root token):
 
+[NOTE]
+====
+If you don’t have the Vault CLI installed, download it from: https://developer.hashicorp.com/vault/install[Vault Downloads, window="_blank"]  
+After extracting the binary, ensure it’s in your system `PATH`.
+====
+
 [source,bash]
 ----
 export VAULT_ADDR=http://vault.test

@@ -1,3 +1,4 @@
+
 == Environment and Tooling
 
 This seminar is designed to be executed in a local development environment that closely simulates production-grade Kubernetes deployments.  

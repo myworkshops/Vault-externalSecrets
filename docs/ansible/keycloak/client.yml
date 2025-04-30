@@ -59,6 +59,7 @@
         msg:
           - "🔐 Keycloak Client Credentials"
           - "Environment      : {{ realm_name }}"
-          - "Client ID        : {{ client_id }}"
-          - "Client Secret    : {{ client_secret.clientsecret_info.value }}"
+          - "Vault Path       : /iam/idp_clients/sentinel-1"
+          - "client_id        : {{ client_id }}"
+          - "client_secret    : {{ client_secret.clientsecret_info.value }}"
       when: not publicClient

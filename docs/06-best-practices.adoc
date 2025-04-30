@@ -1,3 +1,4 @@
+
 == Best Practices and Security Considerations
 
 A secure secret management platform in Kubernetes requires disciplined authentication, access control, infrastructure hardening, and operational monitoring.  

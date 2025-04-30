@@ -1,3 +1,4 @@
+
 == Deploying Sentinel‑1 API with Vault, ESO, and Keycloak Integration
 
 In this section, we will deploy the *Sentinel‑1* Go-based API into a Kubernetes cluster, showcasing a complete integration of *HashiCorp Vault* for secrets management, *External Secrets Operator (ESO)* for Kubernetes-native secret synchronization, and *Keycloak* as the centralized Identity Provider (IdP).
@@ -115,7 +116,7 @@ This ensures that credentials are securely stored for later retrieval via Extern
 image::images/keycloak-client-output.png[Client credentials log, width=400, align=center]
 
 .Credentials stored in Vault
-image::images/vault-client-secret-sentinel.png[Vault KV storage, width=840, align=center]
+image::images/vault-client-secret-sentinel.png[Vault KV storage, width=800, align=center]
 
 
 === Keycloak Configuration Validation (Optional)
@@ -158,7 +159,7 @@ Use the following script to create the SecretStore and ExternalSecret dynamicall
 [source,bash]
 ----
 for ENV in dev qa prod; do
-  echo "Deploying SecretStore and ExternalSecret in $ENV..."
+  echo -e "\n Deploying SecretStore and ExternalSecret in $ENV... \n"
 
   helm upgrade --install vault-$ENV \
     helm/external-secrets/secretStore/ \
