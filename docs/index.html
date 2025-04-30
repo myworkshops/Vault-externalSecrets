@@ -186,6 +186,12 @@
 <div class="paragraph">
 <p>Throughout the seminar, we emphasize reproducibility, security best practices, and real-world applicability, offering students a hands-on, industry-aligned experience.</p>
 </div>
+<div id="3a4e9b52-b41c-44a4-bf7c-f700222c8f1a" class="imageblock text-center">
+<div class="content">
+<img src="images/architecture.png" alt="Keycloak User List" width="600">
+</div>
+<div class="title">Figure 1. Seminar Architecture</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -788,11 +794,11 @@ Login using the <strong>Initial Root Token</strong>.</p>
 <div class="paragraph">
 <p>After logging in, you should see the Vault UI dashboard</p>
 </div>
-<div id="3fa018da-2776-4309-ade4-a2f13243e8b9" class="imageblock text-center">
+<div id="224622d5-bdbc-4f96-a164-1173128e0389" class="imageblock text-center">
 <div class="content">
 <img src="images/vaultUI.png" alt="Vault UI" width="600">
 </div>
-<div class="title">Figure 1. Vault dashboard</div>
+<div class="title">Figure 2. Vault dashboard</div>
 </div>
 </div>
 </div>
@@ -1222,11 +1228,11 @@ EOF</span></code></pre>
 <div class="paragraph">
 <p>The response that you receive should look similar to this:</p>
 </div>
-<div id="89d0d5fb-8602-4a59-b522-e945c944819b" class="imageblock text-center">
+<div id="64057672-f775-473b-af24-21550b963c4b" class="imageblock text-center">
 <div class="content">
 <img src="images/vaultToken.png" alt="Vault token login response" width="600">
 </div>
-<div class="title">Figure 2. Vault token issued via Kubernetes authentication using vault-sa in dev namespace</div>
+<div class="title">Figure 3. Vault token issued via Kubernetes authentication using vault-sa in dev namespace</div>
 </div>
 </div>
 <div class="sect4">
@@ -1244,11 +1250,11 @@ EOF</span></code></pre>
 <div class="paragraph">
 <p>If configured correctly, you should see the secret:</p>
 </div>
-<div id="0c1bfbb1-7005-4f94-8561-5d0f127abbd8" class="imageblock text-center">
+<div id="4b71905e-af2b-4785-aba1-e405d4b07a43" class="imageblock text-center">
 <div class="content">
 <img src="images/vaultSecret.png" alt="Vault token login response" width="600">
 </div>
-<div class="title">Figure 3. Secret retrieved from Vault using the token</div>
+<div class="title">Figure 4. Secret retrieved from Vault using the token</div>
 </div>
 </div>
 <div class="sect4">
@@ -1526,11 +1532,11 @@ dev-credential   SecretStore   vault-store   1h                 SecretSynced   T
 <div class="paragraph">
 <p>The output should include both <code>username</code> and <code>password</code> keys encoded in base64.</p>
 </div>
-<div id="74fe6ec5-8718-492a-bb9d-26d186ed751a" class="imageblock text-center">
+<div id="50d0fcf5-0596-4936-a48a-fd790b6f3af8" class="imageblock text-center">
 <div class="content">
 <img src="images/syncedSecret.png" alt="Synced secret" width="450">
 </div>
-<div class="title">Figure 4. Vault secret synced to Kubernetes</div>
+<div class="title">Figure 5. Vault secret synced to Kubernetes</div>
 </div>
 </div>
 </div>
@@ -1714,11 +1720,11 @@ keycloak-0   1/1     Running   0          1m</span></code></pre>
 <div class="paragraph">
 <p>You now have Keycloak accessible through Ingress, consistent with how Vault is exposed.</p>
 </div>
-<div id="81e26ad5-9d8e-4504-bc3a-41086eb8dd21" class="imageblock text-center">
+<div id="8fbbd9bb-966e-40d1-9977-3aa50b2867a4" class="imageblock text-center">
 <div class="content">
 <img src="images/keycloakUI.png" alt="Keycloak UI" width="600">
 </div>
-<div class="title">Figure 5. User interface of Keycloak</div>
+<div class="title">Figure 6. User interface of Keycloak</div>
 </div>
 </div>
 </div>
@@ -1901,17 +1907,17 @@ Store them manually in Vault under the corresponding path for each environment:<
 </tr>
 </table>
 </div>
-<div id="c2245ae7-5c02-4ac3-8dc3-87a9e4e4b3d3" class="imageblock text-center">
+<div id="6b45b758-f780-4ce5-bba8-5c17013f7bff" class="imageblock text-center">
 <div class="content">
 <img src="images/keycloak-client-output.png" alt="Client credentials log" width="400">
 </div>
-<div class="title">Figure 6. Ansible output showing client credentials</div>
+<div class="title">Figure 7. Ansible output showing client credentials</div>
 </div>
-<div id="43b7b1f0-051e-45ba-9c9f-fdc16d9f2c7e" class="imageblock text-center">
+<div id="b6cb6440-0d3a-4b6b-8d37-10a178c5aa50" class="imageblock text-center">
 <div class="content">
 <img src="images/vault-client-secret-sentinel.png" alt="Vault KV storage" width="800">
 </div>
-<div class="title">Figure 7. Credentials stored in Vault</div>
+<div class="title">Figure 8. Credentials stored in Vault</div>
 </div>
 </div>
 </div>
@@ -2412,13 +2418,14 @@ The following best practices should be applied consistently across environments.
 <h2 id="_list_of_figures">8. List of figures</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="#3fa018da-2776-4309-ade4-a2f13243e8b9">Figure 1.</a> Vault dashboard<br>
-<a href="#89d0d5fb-8602-4a59-b522-e945c944819b">Figure 2.</a> Vault token issued via Kubernetes authentication using vault-sa in dev namespace<br>
-<a href="#0c1bfbb1-7005-4f94-8561-5d0f127abbd8">Figure 3.</a> Secret retrieved from Vault using the token<br>
-<a href="#74fe6ec5-8718-492a-bb9d-26d186ed751a">Figure 4.</a> Vault secret synced to Kubernetes<br>
-<a href="#81e26ad5-9d8e-4504-bc3a-41086eb8dd21">Figure 5.</a> User interface of Keycloak<br>
-<a href="#c2245ae7-5c02-4ac3-8dc3-87a9e4e4b3d3">Figure 6.</a> Ansible output showing client credentials<br>
-<a href="#43b7b1f0-051e-45ba-9c9f-fdc16d9f2c7e">Figure 7.</a> Credentials stored in Vault<br></p>
+<p><a href="#3a4e9b52-b41c-44a4-bf7c-f700222c8f1a">Figure 1.</a> Seminar Architecture<br>
+<a href="#224622d5-bdbc-4f96-a164-1173128e0389">Figure 2.</a> Vault dashboard<br>
+<a href="#64057672-f775-473b-af24-21550b963c4b">Figure 3.</a> Vault token issued via Kubernetes authentication using vault-sa in dev namespace<br>
+<a href="#4b71905e-af2b-4785-aba1-e405d4b07a43">Figure 4.</a> Secret retrieved from Vault using the token<br>
+<a href="#50d0fcf5-0596-4936-a48a-fd790b6f3af8">Figure 5.</a> Vault secret synced to Kubernetes<br>
+<a href="#8fbbd9bb-966e-40d1-9977-3aa50b2867a4">Figure 6.</a> User interface of Keycloak<br>
+<a href="#6b45b758-f780-4ce5-bba8-5c17013f7bff">Figure 7.</a> Ansible output showing client credentials<br>
+<a href="#b6cb6440-0d3a-4b6b-8d37-10a178c5aa50">Figure 8.</a> Credentials stored in Vault<br></p>
 </div>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
 </div>

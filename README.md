@@ -2,6 +2,8 @@
 
 This repository contains the complete setup for a hands-on seminar focused on secure secret management in Kubernetes using HashiCorp Vault, External Secrets Operator (ESO), and Keycloak as the identity provider.
 
+![Banner](docs/images/architecture.png)
+
 ## 🚀 What’s Included
 
 - Multi-environment configuration: `dev`, `qa`, and `prod` namespaces

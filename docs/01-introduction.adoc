@@ -19,3 +19,6 @@ This seminar focuses on demonstrating a complete, automated workflow to:
 Keycloak will be configured as the centralized Identity Provider (IdP) to manage authentication flows, realms, clients, and user identities across all environments (`dev`, `qa`, and `prod`).
 
 Throughout the seminar, we emphasize reproducibility, security best practices, and real-world applicability, offering students a hands-on, industry-aligned experience.
+
+.Seminar Architecture
+image::images/architecture.png[Keycloak User List, width=600, align=center]
